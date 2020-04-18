@@ -67,6 +67,7 @@ class AbsoluteBounds(object):
     def bottom_right(self):
         return Point(self.top_right.x, self.bottom_left.y)
 
+    @property
     def top_left(self):
         return Point(self.bottom_left.x, self.top_right.y)
 

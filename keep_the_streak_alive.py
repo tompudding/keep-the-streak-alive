@@ -24,18 +24,33 @@ def init():
     globals.space.gravity = (0.0, -1000.0)
     globals.space.damping = 0.999 # to prevent it from blowing up.
 
+
+    #Put lines around the screen
     static_lines = [pymunk.Segment(globals.space.static_body,
                                    globals.screen_root.absolute.bottom_left,
                                    globals.screen_root.absolute.bottom_right, 0.0)
                     ]
+    #left hand side
+    static_lines.append(pymunk.Segment(globals.space.static_body,
+                                       globals.screen_root.absolute.bottom_left,
+                                       globals.screen_root.absolute.top_left, 0.0))
+    #top
+    static_lines.append(pymunk.Segment(globals.space.static_body,
+                                       globals.screen_root.absolute.top_left,
+                                       globals.screen_root.absolute.top_right, 0.0))
+    #right
+    static_lines.append(pymunk.Segment(globals.space.static_body,
+                                       globals.screen_root.absolute.top_right,
+                                       globals.screen_root.absolute.bottom_right, 0.0))
     for l in static_lines:
-        l.friction = 0.5
+        l.friction = 3000
     globals.space.add(static_lines)
 
     globals.screen.full_quad      = drawing.Quad(globals.screen_quadbuffer)
     globals.screen.full_quad.set_vertices(Point(0, 0), globals.screen, 0.01)
     globals.ui_buffer             = drawing.QuadBuffer(131072, ui=True)
     globals.screen_relative       = drawing.QuadBuffer(131072, ui=True)
+    globals.line_buffer           = drawing.LineBuffer(131072)
     globals.sounds                = sounds.Sounds()
 
     globals.mouse_relative_text = drawing.QuadBuffer(1024, ui=True, mouse_relative=True)

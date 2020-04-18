@@ -274,12 +274,12 @@ def init(w, h):
     glClearColor(0.0, 0.0, 0.0, 1.0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    set_render_dimensions(w, h, z_max)
+    #set_render_dimensions(w, h, z_max)
 
     glEnable(GL_TEXTURE_2D)
     glEnable(GL_BLEND)
     glEnable(GL_DEPTH_TEST)
-    #glAlphaFunc(GL_GREATER, 0.25);
+    glAlphaFunc(GL_GREATER, 0.25);
     glEnable(GL_ALPHA_TEST)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
@@ -300,7 +300,7 @@ def scale(x, y, z):
 
 
 def new_frame():
-    ui_buffers.reset()
+    #ui_buffers.reset()
     #geom_shader.use()
     #gbuffer.bind_for_writing()
     default_shader.use()
@@ -464,9 +464,9 @@ def draw_all(quad_buffer, texture):
     draw a quadbuffer with with a vertex array, texture coordinate array, and a colour
     array
     """
-    if quad_buffer.is_ui:
-        ui_buffers.add(quad_buffer, texture)
-        return
+    #if quad_buffer.is_ui:
+    #    ui_buffers.add(quad_buffer, texture)
+    #    return
     #draw_all_now_normals(quad_buffer, texture, geom_shader)
     draw_all_now(quad_buffer, texture, default_shader)
 
@@ -533,10 +533,7 @@ def draw_no_texture(quad_buffer):
     draw a quadbuffer with only vertex arrays and colour arrays. We need to make sure that
     we turn the clientstate for texture coordinates back on after we're finished
     """
-    if quad_buffer.is_ui:
-        ui_buffers.add(quad_buffer, None)
-        return
-    draw_no_texture_now(quad_buffer, geom_shader)
+    draw_no_texture_now(quad_buffer, default_shader)
 
 
 def draw_no_texture_now(quad_buffer, shader):
@@ -548,8 +545,11 @@ def draw_no_texture_now(quad_buffer, shader):
 
     glVertexAttribPointer(shader.locations.vertex_data, 3, GL_FLOAT, GL_FALSE, 0, quad_buffer.vertex_data)
     glVertexAttribPointer(shader.locations.colour_data, 4, GL_FLOAT, GL_FALSE, 0, quad_buffer.colour_data)
-
-    glDrawElements(GL_QUADS, quad_buffer.current_size, GL_UNSIGNED_INT, quad_buffer.indices)
+    glDrawElements(quad_buffer.draw_type, quad_buffer.current_size, GL_UNSIGNED_INT, quad_buffer.indices)
 
     glDisableVertexAttribArray(shader.locations.vertex_data)
     glDisableVertexAttribArray(shader.locations.colour_data)
+
+def line_width(width):
+    glEnable(GL_LINE_SMOOTH)
+    glLineWidth(width)

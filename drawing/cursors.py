@@ -25,6 +25,12 @@ class Cursor(object):
         self.cursor_quad = drawing.Quad(self.buffer)
         self.set_cursor('default')
 
+    def disable(self):
+        self.cursor_quad.disable()
+
+    def enable(self):
+        self.cursor_quad.disable()
+
     def set_cursor(self, name):
         try:
             subimage = self.get_subimage(name)
