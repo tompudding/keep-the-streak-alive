@@ -467,7 +467,8 @@ def draw_all(quad_buffer, texture):
     if quad_buffer.is_ui:
         ui_buffers.add(quad_buffer, texture)
         return
-    draw_all_now_normals(quad_buffer, texture, geom_shader)
+    #draw_all_now_normals(quad_buffer, texture, geom_shader)
+    draw_all_now(quad_buffer, texture, default_shader)
 
 
 def draw_all_now_normals(quad_buffer, texture, shader):
