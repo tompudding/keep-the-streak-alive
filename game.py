@@ -15,6 +15,12 @@ def to_world_coords(p):
 def to_screen_coords(p):
     return p/sf
 
+class CollisionTypes:
+    BALL   = 1
+    BOTTOM = 2
+    BOX    = 3
+    WALL   = 4
+
 class Box(object):
     def __init__(self, parent, bl, tr):
         self.parent = parent
@@ -37,6 +43,7 @@ class Box(object):
         self.shape = pymunk.Poly(self.body, vertices)
         self.shape.friction = 0.5
         self.shape.elasticity = 0.95
+        self.shape.collision_type = CollisionTypes.BOX
         globals.space.add(self.body, self.shape)
 
     def update(self, t):
@@ -71,6 +78,7 @@ class Ball(object):
         self.shape = pymunk.Circle(self.body, radius)
         self.shape.friction = 0.5
         self.shape.elasticity = 0.95
+        self.shape.collision_type = CollisionTypes.BALL
         globals.space.add(self.body, self.shape)
         self.polar_vertices = [cmath.polar(v[0] + v[1]*1j) for v in self.vertices]
 
@@ -130,10 +138,25 @@ class GameView(ui.RootElement):
         self.dragging_line = Line(self, None, None)
 
 
-        self.thrown = False
         globals.cursor.disable()
         self.dragging = None
         self.thrown = False
+
+        self.bottom_handler = globals.space.add_collision_handler(CollisionTypes.BALL, CollisionTypes.BOTTOM)
+        self.box_handler = globals.space.add_collision_handler(CollisionTypes.BALL, CollisionTypes.BOX)
+
+        self.bottom_handler.begin = self.bottom_hit
+        self.box_handler.begin = self.box_hit
+
+    def box_hit(self, arbiter, space, data):
+        print('Boop box')
+        return True
+
+    def bottom_hit(self, arbiter, space, data):
+        print('KLARG bottom hit')
+        self.thrown = False
+        globals.cursor.disable()
+        return True
 
     def update(self, t):
         self.test_box.update(t)
@@ -158,7 +181,7 @@ class GameView(ui.RootElement):
             self.dragging_line.update()
 
     def mouse_button_down(self,pos,button):
-        if button == 1:
+        if button == 1 and not self.thrown:
             #Clicked the main mouse button. We shouldn't be dragging anything or somethings gone wrong
             if self.dragging:
                 print('What')
@@ -185,6 +208,12 @@ class GameView(ui.RootElement):
             self.ball.body.moment = self.ball.moment
             self.ball.body.apply_impulse_at_local_point(self.dragging - pos)
             self.thrown = True
+            globals.cursor.enable()
             self.dragging = None
             self.dragging_line.disable()
+
+        elif button == 3 and self.thrown and not self.dragging:
+            self.thrown = False
+            globals.cursor.disable()
+
         return False,False

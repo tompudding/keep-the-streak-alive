@@ -26,10 +26,13 @@ def init():
 
 
     #Put lines around the screen
-    static_lines = [pymunk.Segment(globals.space.static_body,
-                                   globals.screen_root.absolute.bottom_left,
-                                   globals.screen_root.absolute.bottom_right, 0.0)
-                    ]
+    bottom = pymunk.Segment(globals.space.static_body,
+                            globals.screen_root.absolute.bottom_left,
+                            globals.screen_root.absolute.bottom_right, 0.0)
+    #bottom.sensor = True
+    bottom.collision_type = game.CollisionTypes.BOTTOM
+    static_lines = [bottom]
+
     #left hand side
     static_lines.append(pymunk.Segment(globals.space.static_body,
                                        globals.screen_root.absolute.bottom_left,
@@ -42,9 +45,13 @@ def init():
     static_lines.append(pymunk.Segment(globals.space.static_body,
                                        globals.screen_root.absolute.top_right,
                                        globals.screen_root.absolute.bottom_right, 0.0))
-    for l in static_lines:
+    for i,l in enumerate(static_lines):
         l.friction = 3000
         l.elasticity = 0.95
+        if i == 0:
+            l.collision_type = game.CollisionTypes.BOTTOM
+        else:
+            l.collision_type = game.CollisionTypes.WALL
     globals.space.add(static_lines)
 
     globals.screen.full_quad      = drawing.Quad(globals.screen_quadbuffer)

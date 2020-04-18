@@ -29,7 +29,7 @@ class Cursor(object):
         self.cursor_quad.disable()
 
     def enable(self):
-        self.cursor_quad.disable()
+        self.cursor_quad.enable()
 
     def set_cursor(self, name):
         try:
