@@ -20,7 +20,8 @@ class Box(object):
         self.quad.set_vertices(bl, tr, box_level)
         self.quad.set_texture_coordinates(parent.atlas.texture_coords('resource/sprites/box.png'))
         mass = 10.0
-        vertices = [[float(c) for c in v[:2]] for v in self.quad.vertex[:4]]
+        centre = self.quad.get_centre()
+        vertices = [Point(*v[:2]) - centre for v in self.quad.vertex[:4]]
         #vertices = [vertices[2],vertices[3],vertices[0],vertices[1]]
         moment = pymunk.moment_for_poly(mass, vertices)
         self.body = pymunk.Body(mass=mass, moment=moment)
@@ -55,10 +56,11 @@ class GameView(ui.RootElement):
         self.atlas = drawing.texture.TextureAtlas('atlas_0.png','atlas.txt',extra_names=None)
 
         self.test_box = Box(self, Point(100,100), Point(200,200))
+        self.test_box1 = Box(self, Point(160,210), Point(260,310))
 
     def update(self, t):
         self.test_box.update(t)
-
+        self.test_box1.update(t)
 
     def draw(self):
         drawing.draw_all(globals.quad_buffer, self.atlas.texture)

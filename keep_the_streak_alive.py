@@ -21,8 +21,16 @@ def init():
     globals.nonstatic_text_buffer = drawing.QuadBuffer(131072)
     globals.screen_quadbuffer     = drawing.QuadBuffer(16)
     globals.space = pymunk.Space()      # Create a Space which contain the simulation
-    globals.space.gravity = (0.0, -10.0)
+    globals.space.gravity = (0.0, -1000.0)
     globals.space.damping = 0.999 # to prevent it from blowing up.
+
+    static_lines = [pymunk.Segment(globals.space.static_body,
+                                   globals.screen_root.absolute.bottom_left,
+                                   globals.screen_root.absolute.bottom_right, 0.0)
+                    ]
+    for l in static_lines:
+        l.friction = 0.5
+    globals.space.add(static_lines)
 
     globals.screen.full_quad      = drawing.Quad(globals.screen_quadbuffer)
     globals.screen.full_quad.set_vertices(Point(0, 0), globals.screen, 0.01)
@@ -62,8 +70,8 @@ def main_run():
             last = t
 
         globals.t = t
-        #if fps == 0:
-        fps = 50
+        if fps == 0:
+            fps = 50
         iterations = 25
         dt = 1.0/float(fps)/float(iterations)
         for x in range(iterations): # 10 iterations to get a more stable simulation

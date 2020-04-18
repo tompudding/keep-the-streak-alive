@@ -63,6 +63,13 @@ class AbsoluteBounds(object):
         self.top_right   = None
         self.size        = None
 
+    @property
+    def bottom_right(self):
+        return Point(self.top_right.x, self.bottom_left.y)
+
+    def top_left(self):
+        return Point(self.bottom_left.x, self.top_right.y)
+
 
 class UIElement(object):
     """Base class for all UI elements that can be drawn to the screen, including things like text boxes and
