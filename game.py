@@ -25,8 +25,8 @@ class Box(object):
         centre = self.quad.get_centre()
         vertices = [Point(*v[:2]) - centre for v in self.quad.vertex[:4]]
         #vertices = [vertices[2],vertices[3],vertices[0],vertices[1]]
-        moment = pymunk.moment_for_poly(mass, vertices)
-        self.body = pymunk.Body(mass=mass, moment=moment, body_type=pymunk.Body.STATIC)
+        self.moment = pymunk.moment_for_poly(mass, vertices)
+        self.body = pymunk.Body(mass=mass, moment=self.moment, body_type=pymunk.Body.STATIC)
         self.body.position = to_world_coords(self.quad.get_centre().to_float())
         self.body.force = 0,0
         self.body.torque = 0
@@ -36,6 +36,7 @@ class Box(object):
         print(vertices)
         self.shape = pymunk.Poly(self.body, vertices)
         self.shape.friction = 0.5
+        self.shape.elasticity = 0.95
         globals.space.add(self.body, self.shape)
 
     def update(self, t):
@@ -59,8 +60,8 @@ class Ball(object):
         self.quad.set_vertices(self.vertices[0] + self.centre, self.vertices[2] + self.centre, ball_level)
 
         mass = 0.1
-        moment = pymunk.moment_for_circle(mass, 0, radius)
-        self.body = pymunk.Body(mass=mass, moment=moment)
+        self.moment = pymunk.moment_for_circle(mass, 0, radius)
+        self.body = pymunk.Body(mass=mass, moment=self.moment)
         self.body.position = to_world_coords(self.quad.get_centre().to_float())
         self.body.force = 0,0
         self.body.torque = 0
@@ -68,7 +69,8 @@ class Ball(object):
         self.body.angular_velocity = 0
         print(self.body.position,self.body.velocity)
         self.shape = pymunk.Circle(self.body, radius)
-        self.shape.friction = 1000
+        self.shape.friction = 0.5
+        self.shape.elasticity = 0.95
         globals.space.add(self.body, self.shape)
         self.polar_vertices = [cmath.polar(v[0] + v[1]*1j) for v in self.vertices]
 
@@ -131,6 +133,7 @@ class GameView(ui.RootElement):
         self.thrown = False
         globals.cursor.disable()
         self.dragging = None
+        self.thrown = False
 
     def update(self, t):
         self.test_box.update(t)
@@ -173,6 +176,15 @@ class GameView(ui.RootElement):
         if button == 1 and self.dragging:
             #release!
             print(f'Drag release from {self.dragging=} to {pos=}')
+            self.ball.body.position = pos
+            self.ball.body.angle = 0
+            self.ball.body.force = 0,0
+            self.ball.body.torque = 0
+            self.ball.body.velocity = 0,0
+            self.ball.body.angular_velocity = 0
+            self.ball.body.moment = self.ball.moment
+            self.ball.body.apply_impulse_at_local_point(self.dragging - pos)
+            self.thrown = True
             self.dragging = None
             self.dragging_line.disable()
         return False,False

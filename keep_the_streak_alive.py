@@ -44,6 +44,7 @@ def init():
                                        globals.screen_root.absolute.bottom_right, 0.0))
     for l in static_lines:
         l.friction = 3000
+        l.elasticity = 0.95
     globals.space.add(static_lines)
 
     globals.screen.full_quad      = drawing.Quad(globals.screen_quadbuffer)
