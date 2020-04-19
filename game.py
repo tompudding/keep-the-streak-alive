@@ -4,6 +4,7 @@ from globals.types import Point
 import drawing
 import pymunk
 import cmath
+import math
 
 box_level = 7
 ball_level = 8
@@ -135,6 +136,7 @@ class Cup(object):
         self.vertices = [pos + (((Point(*v) - Point(43,0))*0.7)) for v in self.vertices]
         self.segments = []
         self.line_quads = []
+        self.dotted_line = []
 
         for i in range(len(self.vertices) - 1):
             v = self.vertices
@@ -153,6 +155,25 @@ class Cup(object):
             print(v[i],v[i+1])
 
         globals.space.add(self.segments)
+
+    def reset_line(self):
+        for line in self.dotted_line:
+            line.delete()
+        self.dotted_line = []
+
+        # Finally we draw a dotted line around where you're allowed to throw from. That means starting over at
+        # the left and going round
+        num_segments = 200
+        angle = math.pi/num_segments
+        for dot in range(0, num_segments, 2):
+            a = angle*dot
+            b = angle*(dot+1)
+            start = self.centre + (Point(math.cos(a), math.sin(a)) * self.parent.min_distance)
+            end = self.centre + (Point(math.cos(b), math.sin(b)) * self.parent.min_distance)
+            line = drawing.Line(globals.line_buffer)
+            line.set_colour( (0.4,0.4,0.4,1) )
+            line.set_vertices(start, end, 6)
+            self.dotted_line.append(line)
 
 
 class NextLevel(ui.HoverableBox):
@@ -220,16 +241,46 @@ class GameOver(ui.HoverableBox):
 
 class LevelZero(object):
     text = 'Get the ball in the cup'
+    subtext = 'Shoot from outside the line'
     items = []
+    min_distance = 200
+    min_force = 50
 
 class LevelOne(object):
     text = 'Bounce the ball off the box first'
+    subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200))]
+    min_distance = 300
+    min_force = 50
 
 class LevelTwo(object):
     text = 'Bounce the ball off both boxes. Keep the streak alive!'
+    subtext = None
     items = [(Box, Point(100, 100), Point(200,200)),
-             (Box, Point(300, 300), Point(400,400))]
+             (Box, Point(300, 100), Point(400,200))]
+    min_distance = 300
+    min_force = 0
+
+class LevelThree(object):
+    text = 'Keep the streak alive!'
+    subtext = None
+    items = [(Box, Point(100, 100), Point(200,200)),
+             (Box, Point(300, 100), Point(400,200)),
+             (Box, Point(500, 100), Point(600,200))
+    ]
+    min_distance = 300
+    min_force = 0
+
+class LevelFour(object):
+    text = 'Bounce the ball off all boxes. Keep the streak alive!'
+    subtext = None
+    items = [(Box, Point(100, 100), Point(200,200)),
+             (Box, Point(300, 100), Point(400,200)),
+             (Box, Point(500, 100), Point(600,200)),
+             (Box, Point(700, 100), Point(800,200))
+    ]
+    min_distance = 300
+    min_force = 0
 
 
 class GameView(ui.RootElement):
@@ -259,6 +310,7 @@ class GameView(ui.RootElement):
         self.dragging = None
         self.thrown = False
         self.level_text = None
+        self.sub_text = None
 
         self.bottom_handler = globals.space.add_collision_handler(CollisionTypes.BALL, CollisionTypes.BOTTOM)
         self.box_handler = globals.space.add_collision_handler(CollisionTypes.BALL, CollisionTypes.BOX)
@@ -268,7 +320,6 @@ class GameView(ui.RootElement):
         self.box_handler.begin = self.box_hit
         self.cup_handler.begin = self.cup_hit
         #self.cup_handler.separate = self.cup_sep
-        self.cup = Cup(self, Point(globals.screen.x/2,0))
         self.moving = None
         self.moving_pos = None
         self.current_level = 0
@@ -282,9 +333,10 @@ class GameView(ui.RootElement):
 
         self.levels = [LevelZero(),
                        LevelOne(),
-                       LevelTwo()]
+                       LevelTwo(), LevelThree(), LevelFour()]
 
         self.current_level = 0
+        self.cup = Cup(self, Point(globals.screen.x/2,0))
         self.init_level()
 
     def quit(self, pos):
@@ -294,7 +346,12 @@ class GameView(ui.RootElement):
         if self.level_text:
             self.level_text.delete()
         level = self.levels[self.current_level]
+        self.min_distance = level.min_distance
         self.level_text = ui.TextBox(self, Point(0,0.5), Point(1,0.6), level.text, 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
+        if level.subtext:
+            self.sub_text = ui.TextBox(self, Point(0,0.4), Point(1,0.5), level.subtext, 2, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
+        else:
+            self.sub_text = None
         self.text_fade = False
         for box in self.boxes:
             box.delete()
@@ -308,6 +365,7 @@ class GameView(ui.RootElement):
             box = item(self, bl, tr)
             self.boxes.append(box)
         self.old_line.disable()
+        self.cup.reset_line()
 
     def end_game(self):
         self.game_over = GameOver(self, Point(0.2,0.2), Point(0.8,0.8))
@@ -326,6 +384,8 @@ class GameView(ui.RootElement):
         else:
             self.next_level_menu.enable()
         self.level_text.disable()
+        if self.sub_text:
+            self.sub_text.disable()
         return True
 
     def box_hit(self, arbiter, space, data):
@@ -361,10 +421,14 @@ class GameView(ui.RootElement):
         if self.text_fade:
             if globals.t > self.text_fade:
                 self.level_text.disable()
+                if self.sub_text:
+                    self.sub_text.disable()
                 self.text_fade = None
             else:
                 colour = (1,1,1, (self.text_fade - globals.t)/self.text_fade_duration)
                 self.level_text.set_colour(colour)
+                if self.sub_text:
+                    self.sub_text.set_colour(colour)
 
         if not self.thrown:
             self.ball.body.position = globals.mouse_screen
@@ -433,6 +497,10 @@ class GameView(ui.RootElement):
                     self.moving = box
                     self.moving_pos = (pos - box.body.position)
                     return False, False
+
+            throw_distance = (pos - self.cup.centre).length()
+            if throw_distance < self.min_distance:
+                return False, False
 
             #We start dragging
             self.dragging = pos
