@@ -56,7 +56,7 @@ def init():
 
     globals.screen.full_quad      = drawing.Quad(globals.screen_quadbuffer)
     globals.screen.full_quad.set_vertices(Point(0, 0), globals.screen, 0.01)
-    globals.ui_buffer             = drawing.QuadBuffer(131072, ui=True)
+    globals.ui_buffer             = drawing.QuadBuffer(131072)
     globals.screen_relative       = drawing.QuadBuffer(131072, ui=True)
     globals.line_buffer           = drawing.LineBuffer(131072)
     globals.sounds                = sounds.Sounds()
@@ -106,10 +106,12 @@ def main_run():
         globals.screen_root.draw()
         globals.text_manager.draw()
         globals.cursor.draw()
+        drawing.draw_no_texture(globals.ui_buffer)
 
         drawing.end_frame()
 
-        drawing.draw_ui()
+        #drawing.draw_ui()
+
 
         pygame.display.flip()
 

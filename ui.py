@@ -846,6 +846,7 @@ class TextBoxButton(TextBox):
         self.depressed   = False
         self.enabled     = False
         self.colour      = colour
+        self.border_margin = Point(5,5)
         super(TextBoxButton, self).__init__(parent, pos, tr, text, size, colour=colour)
         self.border.disable()
         self.registered = False
@@ -861,7 +862,8 @@ class TextBoxButton(TextBox):
 
     def set_vertices(self):
         self.border.set_colour(drawing.constants.colours.red)
-        self.border.set_vertices(self.absolute.bottom_left, self.absolute.top_right)
+        self.border.set_vertices(self.absolute.bottom_left - self.border_margin, self.absolute.top_right + self.border_margin)
+        print('abl',self.absolute.bottom_left - self.margin,self.text,self.margin)
         if not self.enabled:
             self.border.disable()
 

@@ -151,7 +151,37 @@ class Cup(object):
         globals.space.add(self.segments)
 
 
+class NextLevel(ui.HoverableBox):
+    line_width = 1
+    def __init__(self, parent, bl, tr):
+        self.border = drawing.QuadBorder(globals.ui_buffer, line_width=self.line_width)
+        super(NextLevel, self).__init__(parent, bl, tr, (0,0,0,1))
+        self.text = ui.TextBox(self, Point(0,0.5), Point(1,0.6), 'Well done!', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
+        self.border.set_colour(drawing.constants.colours.red)
+        self.border.set_vertices(self.absolute.bottom_left, self.absolute.top_right)
+        self.border.enable()
+        self.replay_button = ui.TextBoxButton(self, 'Replay', Point(0.1, 0.1), size=2, callback=self.replay)
+        self.continue_button = ui.TextBoxButton(self, 'Next Level', Point(0.7, 0.1), size=2, callback=self.next_level)
 
+    def replay(self, pos):
+        print('Replay')
+        self.parent.replay()
+        self.disable()
+
+    def next_level(self, pos):
+        print('Next level')
+
+    def enable(self):
+        if not self.enabled:
+            self.root.register_ui_element(self)
+            self.border.enable()
+        super(NextLevel, self).enable()
+
+    def disable(self):
+        if self.enabled:
+            self.root.remove_ui_element(self)
+            self.border.disable()
+        super(NextLevel, self).disable()
 
 
 class GameView(ui.RootElement):
@@ -194,16 +224,21 @@ class GameView(ui.RootElement):
         self.cup = Cup(self, Point(globals.screen.x/2,0))
         self.moving = None
         self.moving_pos = None
+        self.current_level = 0
+        self.game_over = False
+        self.paused = False
+        self.next_level = NextLevel(self, Point(0.2,0.2), Point(0.8,0.8))
+        self.next_level.disable()
 
     def cup_hit(self, arbiter, space, data):
-        if not self.thrown:
-            return False
+        self.current_level += 1
+        #if self.current_level >= len(self.levels):
+        #    self.game_over = True
 
-        print('Boom cup')
+        self.paused = True
+        self.next_level.enable()
+        self.level_text.disable()
         return True
-
-    def cup_sep(self, arbiter, space, data):
-        print('What cup')
 
     def box_hit(self, arbiter, space, data):
         if not self.thrown:
@@ -211,6 +246,10 @@ class GameView(ui.RootElement):
 
         print('Boop box')
         return True
+
+    def replay(self):
+        self.paused = False
+        self.throw_ball(*self.last_throw)
 
     def bottom_hit(self, arbiter, space, data):
         if not self.thrown:
@@ -222,6 +261,8 @@ class GameView(ui.RootElement):
     def update(self, t):
         #for box in self.boxes:
         #    box.update()
+        if self.paused:
+            return
 
         if self.text_fade:
             if globals.t > self.text_fade:
@@ -250,10 +291,14 @@ class GameView(ui.RootElement):
 
     def draw(self):
         drawing.draw_all(globals.quad_buffer, self.atlas.texture)
+        drawing.draw_no_texture(globals.ui_buffer)
         drawing.line_width(1)
         drawing.draw_no_texture(globals.line_buffer)
 
+
     def mouse_motion(self, pos, rel, handled):
+        if self.paused:
+            return super(GameView, self).mouse_motion(pos, rel, handled)
         if self.dragging:
             self.dragging_line.set_end(pos)
             self.dragging_line.update()
@@ -268,6 +313,8 @@ class GameView(ui.RootElement):
         globals.cursor.disable()
 
     def mouse_button_down(self,pos,button):
+        if self.paused:
+            return super(GameView, self).mouse_button_down(pos, button)
         if button == 1:
             #Clicked the main mouse button. We shouldn't be dragging anything or somethings gone wrong
             if self.dragging:
@@ -296,6 +343,8 @@ class GameView(ui.RootElement):
         return False,False
 
     def mouse_button_up(self, pos, button):
+        if self.paused:
+            return super(GameView, self).mouse_button_up(pos, button)
         if self.moving:
             if button == 3:
                 self.moving = None
@@ -305,28 +354,34 @@ class GameView(ui.RootElement):
         if button == 1 and self.dragging:
             #release!
             print(f'Drag release from {self.dragging=} to {pos=}')
-            self.ball.body.position = pos
-            self.ball.body.angle = 0
-            self.ball.body.force = 0,0
-            self.ball.body.torque = 0
-            self.ball.body.velocity = 0,0
-            self.ball.body.angular_velocity = 0
-            self.ball.body.moment = self.ball.moment
-            self.ball.body.apply_impulse_at_local_point(self.dragging - pos)
-            self.thrown = True
-            globals.cursor.enable()
-            for line in self.dotted_line[:self.dots]:
-                line.disable()
-            self.dots = 0
+
+            self.throw_ball(pos, self.dragging - pos)
 
             if self.text_fade == False:
                 self.text_fade = globals.t + self.text_fade_duration
-            self.dragging = None
-            self.dragging_line.disable()
-            self.last_ball_pos = self.ball.body.position
-            self.old_line.set(self.dragging_line.start, self.dragging_line.end)
 
         elif button == 3 and self.thrown and not self.dragging:
             self.stop_throw()
 
         return False,False
+
+    def throw_ball(self, pos, direction):
+        self.last_throw = (pos, direction)
+        self.ball.body.position = pos
+        self.ball.body.angle = 0
+        self.ball.body.force = 0,0
+        self.ball.body.torque = 0
+        self.ball.body.velocity = 0,0
+        self.ball.body.angular_velocity = 0
+        self.ball.body.moment = self.ball.moment
+        self.ball.body.apply_impulse_at_local_point(direction)
+        self.thrown = True
+        globals.cursor.enable()
+        for line in self.dotted_line[:self.dots]:
+            line.disable()
+        self.dots = 0
+
+        self.dragging = None
+        self.dragging_line.disable()
+        self.last_ball_pos = self.ball.body.position
+        self.old_line.set(self.dragging_line.start, self.dragging_line.end)

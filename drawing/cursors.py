@@ -42,7 +42,7 @@ class Cursor(object):
         bl = Point(0, -subimage.size.y)
         tr = Point(subimage.size.x, 0)
         self.cursor_quad.set_vertices(bl, tr,
-                                      drawing.constants.DrawLevels.ui)
+                                      drawing.constants.DrawLevels.ui+10)
         self.cursor_quad.set_texture_coordinates(self.atlas.texture_coords(expand_resource(name)))
 
     def draw(self):

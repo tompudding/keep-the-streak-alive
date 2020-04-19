@@ -354,6 +354,7 @@ class QuadBorder(object):
         self.quads[3].set_vertices(bl,
                                   Point(bl.x + self.line_width, tr.y),
                                   drawing.constants.DrawLevels.ui + 1)
+        print(self.quads)
 
     def set_colour(self, colour):
         for quad in self.quads:
