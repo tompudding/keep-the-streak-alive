@@ -231,10 +231,12 @@ class GameView(ui.RootElement):
         if not self.thrown:
             self.ball.body.position = globals.mouse_screen
             #self.ball.set_pos(globals.mouse_pos)
-        else:
-            #update the quad according to its trajectory
-            pass
+
         self.ball.update()
+
+        if self.thrown:
+            diff = ball.body.position - self.last_ball_pos
+            print(diff)
 
     def draw(self):
         drawing.draw_all(globals.quad_buffer, self.atlas.texture)
@@ -303,6 +305,7 @@ class GameView(ui.RootElement):
                 self.text_fade = globals.t + self.text_fade_duration
             self.dragging = None
             self.dragging_line.disable()
+            self.last_ball_pos = self.ball.body.position
             self.old_line.set(self.dragging_line.start, self.dragging_line.end)
 
         elif button == 3 and self.thrown and not self.dragging:
