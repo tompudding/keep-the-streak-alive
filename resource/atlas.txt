@@ -1,2 +1,3 @@
 resource/sprites/box.png:resource/atlas_0.png:0:384.0:128:128
-resource/sprites/ball.png:resource/atlas_0.png:128:480.0:32:32
+resource/sprites/touched_box.png:resource/atlas_0.png:128:384.0:128:128
+resource/sprites/ball.png:resource/atlas_0.png:256:480.0:32:32

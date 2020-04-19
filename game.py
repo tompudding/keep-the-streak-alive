@@ -28,7 +28,10 @@ class Box(object):
         self.parent = parent
         self.quad = drawing.Quad(globals.quad_buffer)
         self.quad.set_vertices(bl, tr, box_level)
-        self.quad.set_texture_coordinates(parent.atlas.texture_coords('resource/sprites/box.png'))
+        self.normal_tc = parent.atlas.texture_coords('resource/sprites/box.png')
+        self.touched_tc = parent.atlas.texture_coords('resource/sprites/touched_box.png')
+        self.quad.set_texture_coordinates(self.normal_tc)
+        self.touched = False
         mass = 10.0
         centre = self.quad.get_centre()
         vertices = [Point(*v[:2]) - centre for v in self.quad.vertex[:4]]
@@ -46,6 +49,7 @@ class Box(object):
         self.shape.friction = 0.5
         self.shape.elasticity = 0.95
         self.shape.collision_type = CollisionTypes.BOX
+        self.shape.parent = self
         globals.space.add(self.body, self.shape)
 
     def update(self):
@@ -59,6 +63,14 @@ class Box(object):
     def delete(self):
         self.quad.delete()
         globals.space.remove(self.body, self.shape)
+
+    def set_touched(self):
+        self.touched = True
+        self.quad.set_texture_coordinates(self.touched_tc)
+
+    def reset_touched(self):
+        self.touched = False
+        self.quad.set_texture_coordinates(self.normal_tc)
 
 class Ball(object):
     def __init__(self, parent, pos, radius):
@@ -247,23 +259,23 @@ class LevelZero(object):
     min_force = 50
 
 class LevelOne(object):
-    text = 'Bounce the ball off the box first'
+    text = 'Level 1: Bounce the ball off the box first'
     subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200))]
     min_distance = 300
     min_force = 50
 
 class LevelTwo(object):
-    text = 'Bounce the ball off both boxes. Keep the streak alive!'
-    subtext = None
+    text = 'Level 2: Bounce the ball off both boxes. Keep the streak alive!'
+    subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200)),
              (Box, Point(300, 100), Point(400,200))]
     min_distance = 300
     min_force = 0
 
 class LevelThree(object):
-    text = 'Keep the streak alive!'
-    subtext = None
+    text = 'Level 3: Keep the streak alive!'
+    subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200)),
              (Box, Point(300, 100), Point(400,200)),
              (Box, Point(500, 100), Point(600,200))
@@ -272,8 +284,8 @@ class LevelThree(object):
     min_force = 0
 
 class LevelFour(object):
-    text = 'Bounce the ball off all boxes. Keep the streak alive!'
-    subtext = None
+    text = 'Level 4: Keep the streak alive!'
+    subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200)),
              (Box, Point(300, 100), Point(400,200)),
              (Box, Point(500, 100), Point(600,200)),
@@ -378,6 +390,11 @@ class GameView(ui.RootElement):
         if self.paused:
             return True
 
+        if not all(box.touched for box in self.boxes):
+            self.bottom_hit()
+            return True
+
+
         self.paused = True
         if self.current_level + 1 >= len(self.levels):
             self.end_game()
@@ -393,11 +410,17 @@ class GameView(ui.RootElement):
             return False
 
         print('Boop box')
+
+        for shape in arbiter.shapes:
+            if hasattr(shape, 'parent'):
+                shape.parent.set_touched()
         return True
 
     def replay(self):
         self.paused = False
         self.throw_ball(*self.last_throw)
+        for box in self.boxes:
+            box.reset_touched()
 
     def next_level(self):
         self.stop_throw()
@@ -478,6 +501,8 @@ class GameView(ui.RootElement):
     def stop_throw(self):
         self.thrown = False
         globals.cursor.disable()
+        for box in self.boxes:
+            box.reset_touched()
 
     def mouse_button_down(self,pos,button):
         if self.paused:
