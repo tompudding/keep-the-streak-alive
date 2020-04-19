@@ -221,6 +221,11 @@ class Cup(object):
             line.set_vertices(start, end, 6)
             self.dotted_line.append(line)
 
+    def remove_line(self):
+        for line in self.dotted_line:
+            line.delete()
+        self.dotted_line = []
+
 
 class NextLevel(ui.HoverableBox):
     line_width = 1
@@ -300,6 +305,7 @@ class MainMenu(ui.HoverableBox):
     def __init__(self, parent, bl, tr):
         self.border = drawing.QuadBorder(globals.ui_buffer, line_width=self.line_width)
         self.level_buttons = []
+        self.ticks = []
         super(MainMenu, self).__init__(parent, bl, tr, (0.05,0.05,0.05,1))
         self.text = ui.TextBox(self, Point(0,0.8), Point(1,0.95), 'Keep the Streak Alive', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
         self.border.set_colour(drawing.constants.colours.red)
@@ -308,9 +314,14 @@ class MainMenu(ui.HoverableBox):
         self.quit_button = ui.TextBoxButton(self, 'Quit', Point(0.45, 0.1), size=2, callback=self.parent.quit)
         #self.continue_button = ui.TextBoxButton(self, 'Next Level', Point(0.7, 0.1), size=2, callback=self.next_level)
 
+
         pos = Point(0.2,0.8)
         for i, level in enumerate(parent.levels):
             button = ui.TextBoxButton(self, f'{i}: {level.name}', pos, size=2, callback=call_with(self.start_level, i),)
+            self.ticks.append(ui.TextBox(self, pos-Point(0.05,0.01), tr=pos+Point(0.1,0.04), text='\x9a', scale=3, colour=(0,1,0,1)))
+            if not self.parent.done[i]:
+                self.ticks[i].disable()
+
             pos.y -= 0.1
             self.level_buttons.append(button)
 
@@ -318,20 +329,30 @@ class MainMenu(ui.HoverableBox):
         self.disable()
         self.parent.current_level = level
         self.parent.init_level()
+        self.parent.stop_throw()
+        self.parent.paused = False
 
     def enable(self):
         if not self.enabled:
             self.root.register_ui_element(self)
             self.border.enable()
-            for button in self.level_buttons:
-                button.disable()
+        for button in self.level_buttons:
+            button.enable()
         super(MainMenu, self).enable()
+        for i,tick in enumerate(self.ticks):
+            if self.parent.done[i]:
+                tick.enable()
+            else:
+                tick.disable()
+
 
     def disable(self):
         if self.enabled:
             self.root.remove_ui_element(self)
             self.border.disable()
         super(MainMenu, self).disable()
+        for tick in self.ticks:
+            tick.disable()
 
 
 class GameOver(ui.HoverableBox):
@@ -430,7 +451,7 @@ class LevelFive(Level):
 class LevelSix(Level):
     text = 'Level 5: Keep the streak alive!'
     name = 'Hardestest'
-    disappear = True
+    disappear = False
     subtext = 'Now you can\'t move the boxes (only rotate). Good luck!'
     items = [(Box, Point(423, 619) - Point(50,50), Point(423, 619) + Point(50,50)),
              (Box, Point(912, 637) - Point(50,50), Point(912, 637) + Point(50,50)),
@@ -486,6 +507,7 @@ class GameView(ui.RootElement):
         self.current_level = 0
         self.game_over = False
         self.restricted_box = None
+        self.start_level = None
 
         self.levels = [
             LevelZero(),
@@ -497,6 +519,7 @@ class GameView(ui.RootElement):
             LevelSix(),
             #LevelSeven(),
         ]
+        self.done = [False for level in self.levels]
 
         self.last_throw = None
         self.next_level_menu = NextLevel(self, Point(0.25,0.3), Point(0.75,0.7))
@@ -518,6 +541,7 @@ class GameView(ui.RootElement):
     def init_level(self):
         if self.level_text:
             self.level_text.delete()
+        self.start_level = globals.t
         level = self.levels[self.current_level]
         self.min_distance = level.min_distance
         self.level_text = ui.TextBox(self, Point(0,0.5), Point(1,0.6), level.text, 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
@@ -544,7 +568,7 @@ class GameView(ui.RootElement):
         self.cup.enable()
         self.ball.enable()
         self.old_line.disable()
-        self.cup.reset_line()
+
         globals.cursor.disable()
         self.paused = False
         self.last_throw = None
@@ -553,6 +577,9 @@ class GameView(ui.RootElement):
             self.restricted_box = None
         if level.restricted_start:
             self.restricted_box = DottedBox(self, level.restricted_start[0], level.restricted_start[1])
+            self.cup.remove_line()
+        else:
+            self.cup.reset_line()
 
     def end_game(self):
         self.game_over = GameOver(self, Point(0.2,0.2), Point(0.8,0.8))
@@ -574,6 +601,8 @@ class GameView(ui.RootElement):
             print(self.last_throw)
 
         self.paused = True
+        self.done[self.current_level] = True
+
         if self.current_level + 1 >= len(self.levels):
             self.end_game()
         else:
@@ -607,7 +636,7 @@ class GameView(ui.RootElement):
         self.paused = False
 
     def bottom_hit(self, arbiter, space, data):
-        if not self.thrown:
+        if not self.thrown or self.ball.body.velocity[1] > 0:
             return False
         print('KLARG bottom hit')
         self.stop_throw()
@@ -656,6 +685,9 @@ class GameView(ui.RootElement):
         #    box.update()
         if self.paused:
             return
+
+        if self.text_fade == False and self.start_level and globals.t - self.start_level > 5000:
+            self.text_fade = globals.t + self.text_fade_duration
 
         if self.text_fade:
             if globals.t > self.text_fade:
