@@ -105,8 +105,9 @@ def main_run():
         globals.current_view.draw()
         globals.screen_root.draw()
         globals.text_manager.draw()
-        globals.cursor.draw()
         drawing.draw_no_texture(globals.ui_buffer)
+        globals.cursor.draw()
+
 
         drawing.end_frame()
 

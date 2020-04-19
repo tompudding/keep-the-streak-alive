@@ -256,6 +256,40 @@ class NextLevel(ui.HoverableBox):
             self.border.disable()
         super(NextLevel, self).disable()
 
+class DottedBox(ui.UIElement):
+    def __init__(self, parent, bl, tr):
+        super(DottedBox, self).__init__(parent, bl, tr)
+        #super(DottedBox, self).__init__(parent, bl, tr)
+        self.lines = []
+        seg_size = 5
+        for start, end in ((self.absolute.bottom_left, self.absolute.bottom_right),
+                           (self.absolute.bottom_right, self.absolute.top_right),
+                           (self.absolute.top_right, self.absolute.top_left),
+                           (self.absolute.top_left, self.absolute.bottom_left)):
+            num_segs = ((end - start).length())/seg_size
+            seg = (end - start)/num_segs
+            for i in range(0, int(num_segs), 2):
+                line = drawing.Line(globals.line_buffer)
+                seg_start = start+seg*i
+                seg_end = start+seg*(i+1)
+                line.set_colour( (0.4,0.4,0.4,1) )
+                line.set_vertices(seg_start, seg_end, 6)
+                print(seg_start, seg_end)
+                self.lines.append(line)
+
+    def disable(self):
+        for line in self.lines:
+            line.disable()
+
+    def enable(self):
+        for line in self.lines:
+            line.enable()
+
+    def delete(self):
+        for line in self.lines:
+            line.delete()
+
+
 def call_with(callback, arg):
     def caller(pos):
         return callback(pos, arg)
@@ -390,19 +424,24 @@ class LevelFive(Level):
              (Box, Point(300, 100), Point(400,200)),
              (Box, Point(500, 100), Point(600,200))]
     min_distance = 300
-    restricted_start = 3
+    restricted_start = (Point(0.75,0.1),Point(0.97,0.25))
     min_force = 0
 
 class LevelSix(Level):
     text = 'Level 5: Keep the streak alive!'
     name = 'Hardestest'
     disappear = True
-    subtext = 'Good Luck!'
-    items = [(Box, Point(100, 100), Point(200,200)),
-             (Box, Point(300, 100), Point(400,200))]
+    subtext = 'Now you can\'t move the boxes (only rotate). Good luck!'
+    items = [(Box, Point(423, 619) - Point(50,50), Point(423, 619) + Point(50,50)),
+             (Box, Point(912, 637) - Point(50,50), Point(912, 637) + Point(50,50)),
+             (Box, Point(736, -7) - Point(50,50), Point(736, -7) + Point(50,50)),
+             (Box, Point(518, -1) - Point(50,50), Point(518, -1) + Point(50,50)),
+             (Box, Point(733, 560) - Point(50,50), Point(733, 560) + Point(50,50)),
+    ]
     min_distance = 300
     min_force = 0
-    restricted_start = 3
+    restricted_start = (Point(0.75,0.1),Point(0.97,0.25))
+    boxes_pos_fixed = True
 
 
 
@@ -446,6 +485,7 @@ class GameView(ui.RootElement):
         self.moving_pos = None
         self.current_level = 0
         self.game_over = False
+        self.restricted_box = None
 
         self.levels = [
             LevelZero(),
@@ -494,8 +534,12 @@ class GameView(ui.RootElement):
         self.dots = 0
 
         self.boxes = []
+        #jim = 0
         for item, bl, tr in level.items:
             box = item(self, bl, tr)
+            #box.body.angle = [0.4702232572610111, -0.2761159031752114, 0.06794826568042156, -0.06845718620994479, 1.3234945990935332][jim]
+            box.update()
+            #jim += 1
             self.boxes.append(box)
         self.cup.enable()
         self.ball.enable()
@@ -504,6 +548,11 @@ class GameView(ui.RootElement):
         globals.cursor.disable()
         self.paused = False
         self.last_throw = None
+        if self.restricted_box:
+            self.restricted_box.delete()
+            self.restricted_box = None
+        if level.restricted_start:
+            self.restricted_box = DottedBox(self, level.restricted_start[0], level.restricted_start[1])
 
     def end_game(self):
         self.game_over = GameOver(self, Point(0.2,0.2), Point(0.8,0.8))
@@ -517,9 +566,12 @@ class GameView(ui.RootElement):
             return True
 
         if not all(box.touched for box in self.boxes):
-            self.bottom_hit()
+            self.bottom_hit(arbiter, space, data)
             return True
 
+        for i,box in enumerate(self.boxes):
+            print(i,box.body.position,box.body.angle)
+            print(self.last_throw)
 
         self.paused = True
         if self.current_level + 1 >= len(self.levels):
@@ -585,8 +637,9 @@ class GameView(ui.RootElement):
             self.mouse_button_down(globals.mouse_screen, 3)
 
         #This makes it super easy
-        #elif key == pygame.locals.K_r and self.last_throw:
-        #    self.throw_ball(*self.last_throw)
+        elif key == pygame.locals.K_r and self.last_throw:
+            self.throw_ball(*self.last_throw)
+
 
     def key_up(self, key):
         if key == pygame.locals.K_SPACE:
@@ -634,8 +687,8 @@ class GameView(ui.RootElement):
                 self.last_ball_pos = self.ball.body.position
 
     def draw(self):
-        drawing.draw_all(globals.quad_buffer, self.atlas.texture)
         drawing.draw_no_texture(globals.ui_buffer)
+        drawing.draw_all(globals.quad_buffer, self.atlas.texture)
         drawing.line_width(1)
         drawing.draw_no_texture(globals.line_buffer)
 
@@ -679,12 +732,16 @@ class GameView(ui.RootElement):
                 self.stop_throw()
 
             in_box = None
-            for box in self.boxes:
-                distance, info = box.shape.point_query(pos)
-                if distance < 0:
-                    self.moving = box
-                    self.moving_pos = (pos - box.body.position)
-                    return False, False
+            if False == self.levels[self.current_level].boxes_pos_fixed:
+                for box in self.boxes:
+                    distance, info = box.shape.point_query(pos)
+                    if distance < 0:
+                        self.moving = box
+                        self.moving_pos = (pos - box.body.position)
+                        return False, False
+
+            if self.restricted_box and pos not in self.restricted_box:
+                return False, False
 
             throw_distance = (pos - self.cup.centre).length()
             if throw_distance < self.min_distance:
@@ -720,6 +777,7 @@ class GameView(ui.RootElement):
             print(f'Drag release from {self.dragging=} to {pos=}')
             diff = self.dragging - pos
             if diff.length() > 5:
+                #pos, diff = Point(1084.00,13.00), Point(-41.00,149.00)
                 self.throw_ball(pos, diff)
 
                 if self.text_fade == False:
