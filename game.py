@@ -175,6 +175,10 @@ class GameView(ui.RootElement):
         self.level_text = ui.TextBox(self, Point(0,0.5), Point(1,0.6), 'Get the ball in the cup', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
         self.text_fade = False
 
+        #Make 100 line segments for a dotted trajectory line
+        self.dotted_line = [Line(self, None, None, (0, 0, 0.4, 1)) for i in range(1000)]
+        self.dots = 0
+
         globals.cursor.disable()
         self.dragging = None
         self.thrown = False
@@ -212,8 +216,7 @@ class GameView(ui.RootElement):
         if not self.thrown:
             return False
         print('KLARG bottom hit')
-        self.thrown = False
-        globals.cursor.disable()
+        self.stop_throw()
         return True
 
     def update(self, t):
@@ -235,8 +238,15 @@ class GameView(ui.RootElement):
         self.ball.update()
 
         if self.thrown:
-            diff = ball.body.position - self.last_ball_pos
-            print(diff)
+            diff = self.ball.body.position - self.last_ball_pos
+            if diff.get_length_sqrd() > 10:
+
+                if (self.dots & 1) == 0 and self.dots < len(self.dotted_line):
+                    self.dotted_line[self.dots].set(self.last_ball_pos, self.ball.body.position)
+                    self.dotted_line[self.dots].enable()
+
+                self.dots += 1
+                self.last_ball_pos = self.ball.body.position
 
     def draw(self):
         drawing.draw_all(globals.quad_buffer, self.atlas.texture)
@@ -253,6 +263,10 @@ class GameView(ui.RootElement):
             self.moving.update()
             globals.space.reindex_static()
 
+    def stop_throw(self):
+        self.thrown = False
+        globals.cursor.disable()
+
     def mouse_button_down(self,pos,button):
         if button == 1:
             #Clicked the main mouse button. We shouldn't be dragging anything or somethings gone wrong
@@ -260,8 +274,8 @@ class GameView(ui.RootElement):
                 print('What')
                 self.dragging = None
             if self.thrown:
-                self.thrown = False
-                globals.cursor.disable()
+                self.stop_throw()
+
             #We start dragging
             self.dragging = pos
             self.dragging_line.start = pos
@@ -301,6 +315,10 @@ class GameView(ui.RootElement):
             self.ball.body.apply_impulse_at_local_point(self.dragging - pos)
             self.thrown = True
             globals.cursor.enable()
+            for line in self.dotted_line[:self.dots]:
+                line.disable()
+            self.dots = 0
+
             if self.text_fade == False:
                 self.text_fade = globals.t + self.text_fade_duration
             self.dragging = None
@@ -309,7 +327,6 @@ class GameView(ui.RootElement):
             self.old_line.set(self.dragging_line.start, self.dragging_line.end)
 
         elif button == 3 and self.thrown and not self.dragging:
-            self.thrown = False
-            globals.cursor.disable()
+            self.stop_throw()
 
         return False,False
