@@ -124,10 +124,8 @@ def main_run():
             elif (event.type == pygame.KEYDOWN):
                 try:
                     key = ord(event.unicode)
-                except AttributeError:
+                except (AttributeError, TypeError):
                     key = event.key
-                except TypeError:
-                    continue
 
                 globals.current_view.key_down(key)
             elif (event.type == pygame.KEYUP):

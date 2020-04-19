@@ -5,6 +5,8 @@ import drawing
 import pymunk
 import cmath
 import math
+import pygame
+import traceback
 
 box_level = 7
 ball_level = 8
@@ -51,6 +53,7 @@ class Box(object):
         self.shape.collision_type = CollisionTypes.BOX
         self.shape.parent = self
         globals.space.add(self.body, self.shape)
+        self.in_world = True
 
     def update(self):
         #print(self.body.position,self.body.velocity/sf)
@@ -63,14 +66,25 @@ class Box(object):
     def delete(self):
         self.quad.delete()
         globals.space.remove(self.body, self.shape)
+        self.in_world = False
 
-    def set_touched(self):
+    def set_touched(self, disappear=False):
         self.touched = True
         self.quad.set_texture_coordinates(self.touched_tc)
+        if disappear:
+            self.quad.disable()
+            globals.space.remove(self.body, self.shape)
+            self.in_world = False
 
-    def reset_touched(self):
+    def reset_touched(self, disappear=False):
+        if not self.touched:
+            return
         self.touched = False
         self.quad.set_texture_coordinates(self.normal_tc)
+        if not self.in_world:
+            self.quad.enable()
+            globals.space.add(self.body, self.shape)
+            self.in_world = True
 
 class Ball(object):
     def __init__(self, parent, pos, radius):
@@ -108,6 +122,12 @@ class Ball(object):
             c = cmath.rect(r, a+self.body.angle)
             final_vertices.append(Point(c.real, c.imag) + self.centre)
         self.quad.set_all_vertices(final_vertices, ball_level)
+
+    def disable(self):
+        self.quad.disable()
+
+    def enable(self):
+        self.quad.enable()
 
 class Line(object):
     def __init__(self, parent, start, end, colour=(1, 0, 0, 1)):
@@ -168,6 +188,20 @@ class Cup(object):
 
         globals.space.add(self.segments)
 
+    def disable(self):
+        for quad in self.line_quads:
+            quad.disable()
+
+        for line in self.dotted_line:
+            line.disable()
+
+    def enable(self):
+        for quad in self.line_quads:
+            quad.enable()
+
+        for line in self.dotted_line:
+            line.enable()
+
     def reset_line(self):
         for line in self.dotted_line:
             line.delete()
@@ -222,6 +256,50 @@ class NextLevel(ui.HoverableBox):
             self.border.disable()
         super(NextLevel, self).disable()
 
+def call_with(callback, arg):
+    def caller(pos):
+        return callback(pos, arg)
+    return caller
+
+class MainMenu(ui.HoverableBox):
+    line_width = 1
+    def __init__(self, parent, bl, tr):
+        self.border = drawing.QuadBorder(globals.ui_buffer, line_width=self.line_width)
+        self.level_buttons = []
+        super(MainMenu, self).__init__(parent, bl, tr, (0,0,0,1))
+        self.text = ui.TextBox(self, Point(0,0.8), Point(1,0.95), 'Keep the Streak Alive', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
+        self.border.set_colour(drawing.constants.colours.red)
+        self.border.set_vertices(self.absolute.bottom_left, self.absolute.top_right)
+        self.border.enable()
+        #self.replay_button = ui.TextBoxButton(self, 'Replay', Point(0.1, 0.1), size=2, callback=self.replay)
+        #self.continue_button = ui.TextBoxButton(self, 'Next Level', Point(0.7, 0.1), size=2, callback=self.next_level)
+
+        pos = Point(0.2,0.8)
+        for i, level in enumerate(parent.levels):
+            button = ui.TextBoxButton(self, f'{i}: {level.name}', pos, size=2, callback=call_with(self.start_level, i),)
+            pos.y -= 0.1
+            self.level_buttons.append(button)
+
+    def start_level(self, pos, level):
+        self.disable()
+        self.parent.current_level = level
+        self.parent.init_level()
+
+    def enable(self):
+        if not self.enabled:
+            self.root.register_ui_element(self)
+            self.border.enable()
+            for button in self.level_buttons:
+                button.disable()
+        super(MainMenu, self).enable()
+
+    def disable(self):
+        if self.enabled:
+            self.root.remove_ui_element(self)
+            self.border.disable()
+        super(MainMenu, self).disable()
+
+
 class GameOver(ui.HoverableBox):
     line_width = 1
     def __init__(self, parent, bl, tr):
@@ -251,30 +329,40 @@ class GameOver(ui.HoverableBox):
             self.border.disable()
         super(GameOver, self).disable()
 
-class LevelZero(object):
+class Level(object):
+    disappear = False
+    min_distance = 300
+    restricted_start = None
+    boxes_pos_fixed = False
+
+class LevelZero(Level):
     text = 'Get the ball in the cup'
+    name = 'Introduction'
     subtext = 'Shoot from outside the line'
     items = []
     min_distance = 200
     min_force = 50
 
-class LevelOne(object):
+class LevelOne(Level):
     text = 'Level 1: Bounce the ball off the box first'
+    name = 'Box Bounce'
     subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200))]
     min_distance = 300
     min_force = 50
 
-class LevelTwo(object):
+class LevelTwo(Level):
     text = 'Level 2: Bounce the ball off both boxes. Keep the streak alive!'
+    name = 'Two boxes'
     subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200)),
              (Box, Point(300, 100), Point(400,200))]
     min_distance = 300
     min_force = 0
 
-class LevelThree(object):
+class LevelThree(Level):
     text = 'Level 3: Keep the streak alive!'
+    name = 'Three boxes'
     subtext = 'Left drag to move, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200)),
              (Box, Point(300, 100), Point(400,200)),
@@ -283,16 +371,39 @@ class LevelThree(object):
     min_distance = 300
     min_force = 0
 
-class LevelFour(object):
+class LevelFour(Level):
     text = 'Level 4: Keep the streak alive!'
-    subtext = 'Left drag to move, right drag to rotate'
+    name = 'Three Disappearing Boxes'
+    disappear = True
+    subtext = 'Boxes disappear when hit'
     items = [(Box, Point(100, 100), Point(200,200)),
              (Box, Point(300, 100), Point(400,200)),
-             (Box, Point(500, 100), Point(600,200)),
-             (Box, Point(700, 100), Point(800,200))
-    ]
+             (Box, Point(500, 100), Point(600,200))]
     min_distance = 300
     min_force = 0
+
+class LevelFive(Level):
+    text = 'Level 5: Keep the streak alive!'
+    name = 'Restricted Start'
+    subtext = 'Shoot from the grey box'
+    items = [(Box, Point(100, 100), Point(200,200)),
+             (Box, Point(300, 100), Point(400,200)),
+             (Box, Point(500, 100), Point(600,200))]
+    min_distance = 300
+    restricted_start = 3
+    min_force = 0
+
+class LevelSix(Level):
+    text = 'Level 5: Keep the streak alive!'
+    name = 'Hardestest'
+    disappear = True
+    subtext = 'Good Luck!'
+    items = [(Box, Point(100, 100), Point(200,200)),
+             (Box, Point(300, 100), Point(400,200))]
+    min_distance = 300
+    min_force = 0
+    restricted_start = 3
+
 
 
 class GameView(ui.RootElement):
@@ -318,7 +429,6 @@ class GameView(ui.RootElement):
         self.dotted_line = [Line(self, None, None, (0, 0, 0.4, 1)) for i in range(1000)]
         self.dots = 0
 
-        globals.cursor.disable()
         self.dragging = None
         self.thrown = False
         self.level_text = None
@@ -336,20 +446,31 @@ class GameView(ui.RootElement):
         self.moving_pos = None
         self.current_level = 0
         self.game_over = False
-        self.paused = False
+
+        self.levels = [
+            LevelZero(),
+            LevelOne(),
+            LevelTwo(),
+            LevelThree(),
+            LevelFour(),
+            LevelFive(),
+            LevelSix(),
+            #LevelSeven(),
+        ]
+
         self.last_throw = None
         self.next_level_menu = NextLevel(self, Point(0.25,0.3), Point(0.75,0.7))
         self.next_level_menu.disable()
+        self.main_menu = MainMenu(self, Point(0.2,0.1), Point(0.8,0.9))
+        self.paused = True
         self.rotating = None
         self.rotating_pos = None
 
-        self.levels = [LevelZero(),
-                       LevelOne(),
-                       LevelTwo(), LevelThree(), LevelFour()]
-
         self.current_level = 0
         self.cup = Cup(self, Point(globals.screen.x/2,0))
-        self.init_level()
+        #self.init_level()
+        self.cup.disable()
+        self.ball.disable()
 
     def quit(self, pos):
         raise SystemExit()
@@ -376,8 +497,13 @@ class GameView(ui.RootElement):
         for item, bl, tr in level.items:
             box = item(self, bl, tr)
             self.boxes.append(box)
+        self.cup.enable()
+        self.ball.enable()
         self.old_line.disable()
         self.cup.reset_line()
+        globals.cursor.disable()
+        self.paused = False
+        self.last_throw = None
 
     def end_game(self):
         self.game_over = GameOver(self, Point(0.2,0.2), Point(0.8,0.8))
@@ -413,14 +539,14 @@ class GameView(ui.RootElement):
 
         for shape in arbiter.shapes:
             if hasattr(shape, 'parent'):
-                shape.parent.set_touched()
+                shape.parent.set_touched(self.levels[self.current_level].disappear)
         return True
 
     def replay(self):
         self.paused = False
         self.throw_ball(*self.last_throw)
         for box in self.boxes:
-            box.reset_touched()
+            box.reset_touched(self.levels[self.current_level].disappear)
 
     def next_level(self):
         self.stop_throw()
@@ -434,6 +560,42 @@ class GameView(ui.RootElement):
         print('KLARG bottom hit')
         self.stop_throw()
         return True
+
+    def key_down(self, key):
+        #        if key == pygame.locals.K_RETURN:
+        #            if self.current_player.is_player():
+        #                self.current_player.end_turn(Point(0,0))
+        if key == pygame.locals.K_ESCAPE:
+            if self.main_menu.enabled:
+                return self.quit(0)
+            self.main_menu.enable()
+            self.paused = True
+            globals.cursor.enable()
+            self.level_text.disable()
+            if self.sub_text:
+                self.sub_text.disable()
+            if self.next_level_menu:
+                self.next_level_menu.disable()
+        if key == pygame.locals.K_SPACE:
+            #space is as good as the left button
+            self.mouse_button_down(globals.mouse_screen, 1)
+
+        elif key in (pygame.locals.K_RSHIFT,pygame.locals.K_LSHIFT):
+            #shifts count as the right button
+            self.mouse_button_down(globals.mouse_screen, 3)
+
+        elif key == pygame.locals.K_r and self.last_throw:
+            self.throw_ball(*self.last_throw)
+
+    def key_up(self, key):
+        if key == pygame.locals.K_SPACE:
+            #space is as good as the left button
+            self.mouse_button_up(globals.mouse_screen, 1)
+
+        elif key in (pygame.locals.K_RSHIFT,pygame.locals.K_LSHIFT):
+            #shifts count as the right button
+            self.mouse_button_up(globals.mouse_screen, 3)
+
 
     def update(self, t):
         #for box in self.boxes:
