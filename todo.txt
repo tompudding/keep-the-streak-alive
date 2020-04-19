@@ -1,3 +1,0 @@
-get rid of the level text after a few seconds
-remove the cup semi circle on the restricted start levels
-play some sounds

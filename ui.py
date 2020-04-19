@@ -863,7 +863,6 @@ class TextBoxButton(TextBox):
     def set_vertices(self):
         self.border.set_colour(drawing.constants.colours.red)
         self.border.set_vertices(self.absolute.bottom_left - self.border_margin, self.absolute.top_right + self.border_margin)
-        print('abl',self.absolute.bottom_left - self.margin,self.text,self.margin)
         if not self.enabled:
             self.border.disable()
 

@@ -7,6 +7,7 @@ import cmath
 import math
 import pygame
 import traceback
+import random
 
 box_level = 7
 ball_level = 8
@@ -45,8 +46,8 @@ class Box(object):
         self.body.torque = 0
         self.body.velocity = 0,0
         self.body.angular_velocity = 0
-        print(self.body.position,self.body.velocity)
-        print(vertices)
+        #print(self.body.position,self.body.velocity)
+        #print(vertices)
         self.shape = pymunk.Poly(self.body, vertices)
         self.shape.friction = 0.5
         self.shape.elasticity = 0.95
@@ -69,6 +70,9 @@ class Box(object):
         self.in_world = False
 
     def set_touched(self, disappear=False):
+        if not self.touched:
+            globals.sounds.boops[self.parent.boop].play()
+            self.parent.boop += 1
         self.touched = True
         self.quad.set_texture_coordinates(self.touched_tc)
         if disappear:
@@ -106,7 +110,7 @@ class Ball(object):
         self.body.torque = 0
         self.body.velocity = 0,0
         self.body.angular_velocity = 0
-        print(self.body.position,self.body.velocity)
+        #print(self.body.position,self.body.velocity)
         self.shape = pymunk.Circle(self.body, radius)
         self.shape.friction = 0.5
         self.shape.elasticity = 0.95
@@ -184,7 +188,7 @@ class Cup(object):
             line_quad.set_colour( (1,0,0,1) )
             line_quad.set_vertices(v[i], v[i+1], 6)
             self.line_quads.append(line_quad)
-            print(v[i],v[i+1])
+            #print(v[i],v[i+1])
 
         globals.space.add(self.segments)
 
@@ -240,12 +244,10 @@ class NextLevel(ui.HoverableBox):
         self.continue_button = ui.TextBoxButton(self, 'Next Level', Point(0.7, 0.1), size=2, callback=self.next_level)
 
     def replay(self, pos):
-        print('Replay')
         self.parent.replay()
         self.disable()
 
     def next_level(self, pos):
-        print('Next level')
         self.parent.next_level()
         self.disable()
 
@@ -279,7 +281,6 @@ class DottedBox(ui.UIElement):
                 seg_end = start+seg*(i+1)
                 line.set_colour( (0.4,0.4,0.4,1) )
                 line.set_vertices(seg_start, seg_end, 6)
-                print(seg_start, seg_end)
                 self.lines.append(line)
 
     def disable(self):
@@ -308,6 +309,7 @@ class MainMenu(ui.HoverableBox):
         self.ticks = []
         super(MainMenu, self).__init__(parent, bl, tr, (0.05,0.05,0.05,1))
         self.text = ui.TextBox(self, Point(0,0.8), Point(1,0.95), 'Keep the Streak Alive', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
+        self.info = ui.TextBox(self, Point(0,0.0), Point(1,0.05), 'Right button cancels a throw. Escape for main menu', 1.5, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
         self.border.set_colour(drawing.constants.colours.red)
         self.border.set_vertices(self.absolute.bottom_left, self.absolute.top_right)
         self.border.enable()
@@ -368,7 +370,6 @@ class GameOver(ui.HoverableBox):
         self.quit_button = ui.TextBoxButton(self, 'Quit', Point(0.7, 0.1), size=2, callback=parent.quit)
 
     def replay(self, pos):
-        print('Replay')
         self.parent.replay()
         self.disable()
 
@@ -439,7 +440,7 @@ class LevelFour(Level):
 
 class LevelFive(Level):
     text = 'Level 5: Keep the streak alive!'
-    name = 'Restricted Start'
+    name = 'Harderer'
     subtext = 'Shoot from the grey box'
     items = [(Box, Point(100, 100), Point(200,200)),
              (Box, Point(300, 100), Point(400,200)),
@@ -541,6 +542,7 @@ class GameView(ui.RootElement):
     def init_level(self):
         if self.level_text:
             self.level_text.delete()
+        self.boop = 0
         self.start_level = globals.t
         level = self.levels[self.current_level]
         self.min_distance = level.min_distance
@@ -586,9 +588,6 @@ class GameView(ui.RootElement):
         self.paused = True
 
     def cup_hit(self, arbiter, space, data):
-        #self.current_level += 1
-        #if self.current_level >= len(self.levels):
-        #    self.game_over = True
         if self.paused:
             return True
 
@@ -596,12 +595,13 @@ class GameView(ui.RootElement):
             self.bottom_hit(arbiter, space, data)
             return True
 
-        for i,box in enumerate(self.boxes):
-            print(i,box.body.position,box.body.angle)
-            print(self.last_throw)
+        #for i,box in enumerate(self.boxes):
+        #    print(i,box.body.position,box.body.angle)
+        #    print(self.last_throw)
 
         self.paused = True
         self.done[self.current_level] = True
+        globals.sounds.win.play()
 
         if self.current_level + 1 >= len(self.levels):
             self.end_game()
@@ -616,7 +616,7 @@ class GameView(ui.RootElement):
         if not self.thrown:
             return False
 
-        print('Boop box')
+        #print('Boop box')
 
         for shape in arbiter.shapes:
             if hasattr(shape, 'parent'):
@@ -625,6 +625,7 @@ class GameView(ui.RootElement):
 
     def replay(self):
         self.paused = False
+        self.boop = 0
         self.throw_ball(*self.last_throw)
         for box in self.boxes:
             box.reset_touched(self.levels[self.current_level].disappear)
@@ -638,8 +639,9 @@ class GameView(ui.RootElement):
     def bottom_hit(self, arbiter, space, data):
         if not self.thrown or self.ball.body.velocity[1] > 0:
             return False
-        print('KLARG bottom hit')
+        #print('KLARG bottom hit')
         self.stop_throw()
+        globals.sounds.bad.play()
         return True
 
     def key_down(self, key):
@@ -657,6 +659,8 @@ class GameView(ui.RootElement):
                 self.sub_text.disable()
             if self.next_level_menu:
                 self.next_level_menu.disable()
+            if self.game_over:
+                self.game_over.disable()
         if key == pygame.locals.K_SPACE:
             #space is as good as the left button
             self.mouse_button_down(globals.mouse_screen, 1)
@@ -749,6 +753,7 @@ class GameView(ui.RootElement):
     def stop_throw(self):
         self.thrown = False
         globals.cursor.disable()
+        self.boop = 0
         for box in self.boxes:
             box.reset_touched()
 
@@ -758,7 +763,6 @@ class GameView(ui.RootElement):
         if button == 1:
             #Clicked the main mouse button. We shouldn't be dragging anything or somethings gone wrong
             if self.dragging:
-                print('What')
                 self.dragging = None
             if self.thrown:
                 self.stop_throw()
@@ -791,7 +795,7 @@ class GameView(ui.RootElement):
             for box in self.boxes:
                 distance, info = box.shape.point_query(pos)
                 if distance < 0:
-                    print('In box',distance,info)
+                    #print('In box',distance,info)
                     self.rotating = box
                     #self.rotating_pos = (pos - box.body.position)
                     diff = (pos - box.body.position)
@@ -806,7 +810,7 @@ class GameView(ui.RootElement):
 
         if button == 1 and self.dragging:
             #release!
-            print(f'Drag release from {self.dragging=} to {pos=}')
+            #print(f'Drag release from {self.dragging=} to {pos=}')
             diff = self.dragging - pos
             if diff.length() > 5:
                 #pos, diff = Point(1084.00,13.00), Point(-41.00,149.00)
