@@ -670,8 +670,8 @@ class GameView(ui.RootElement):
             self.mouse_button_down(globals.mouse_screen, 3)
 
         #This makes it super easy
-        elif key == pygame.locals.K_r and self.last_throw:
-            self.throw_ball(*self.last_throw)
+        #elif key == pygame.locals.K_r and self.last_throw:
+        #    self.throw_ball(*self.last_throw)
 
 
     def key_up(self, key):
