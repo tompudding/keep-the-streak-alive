@@ -20,6 +20,7 @@ class CollisionTypes:
     BOTTOM = 2
     BOX    = 3
     WALL   = 4
+    CUP    = 5
 
 class Box(object):
     def __init__(self, parent, bl, tr):
@@ -46,7 +47,7 @@ class Box(object):
         self.shape.collision_type = CollisionTypes.BOX
         globals.space.add(self.body, self.shape)
 
-    def update(self, t):
+    def update(self):
         #print(self.body.position,self.body.velocity/sf)
         vertices = [0,0,0,0]
         for i,v in enumerate(self.shape.get_vertices()):
@@ -82,7 +83,7 @@ class Ball(object):
         globals.space.add(self.body, self.shape)
         self.polar_vertices = [cmath.polar(v[0] + v[1]*1j) for v in self.vertices]
 
-    def update(self, t):
+    def update(self):
         #Don't worry about rotation for now, the sprite is symetrical. We could fix this though
         self.centre = self.body.position
         final_vertices = []
@@ -92,20 +93,23 @@ class Ball(object):
         self.quad.set_all_vertices(final_vertices, ball_level)
 
 class Line(object):
-    def __init__(self, parent, start, end):
+    def __init__(self, parent, start, end, colour=(1, 0, 0, 1)):
         self.parent = parent
         self.line = drawing.Line(globals.line_buffer)
-        self.line.set_colour( (1,0,0,1) )
+        self.line.set_colour( colour )
 
-        self.start = start
-        self.end = end
-        self.update()
+        self.set(start, end)
 
     def set_start(self, start):
         self.start = start
         self.update()
 
     def set_end(self, end):
+        self.end = end
+        self.update()
+
+    def set(self, start, end):
+        self.start = start
         self.end = end
         self.update()
 
@@ -119,9 +123,39 @@ class Line(object):
     def disable(self):
         self.line.disable()
 
+class Cup(object):
+    def __init__(self, parent, pos):
+        self.parent = parent
+        self.centre = pos
+        self.vertices = [(0,90),(20,3),(64,3),(85,90)]
+        self.vertices = [pos + (((Point(*v) - Point(43,0))*0.7)) for v in self.vertices]
+        self.segments = []
+        self.line_quads = []
+
+        for i in range(len(self.vertices) - 1):
+            v = self.vertices
+            segment = pymunk.Segment(globals.space.static_body, v[i], v[i+1], 0)
+            segment.friction = 1000
+            segment.elasticity = 0
+            if i == 1:
+                segment.collision_type = CollisionTypes.CUP
+            else:
+                segment.collision_type = CollisionTypes.WALL
+            self.segments.append(segment)
+            line_quad = drawing.Line(globals.line_buffer)
+            line_quad.set_colour( (1,0,0,1) )
+            line_quad.set_vertices(v[i], v[i+1], 6)
+            self.line_quads.append(line_quad)
+            print(v[i],v[i+1])
+
+        globals.space.add(self.segments)
+
+
+
+
 
 class GameView(ui.RootElement):
-
+    text_fade_duration = 1000
     def __init__(self):
         #self.atlas = globals.atlas = drawing.texture.TextureAtlas('tiles_atlas_0.png','tiles_atlas.txt')
         #globals.ui_atlas = drawing.texture.TextureAtlas('ui_atlas_0.png','ui_atlas.txt',extra_names=False)
@@ -130,13 +164,16 @@ class GameView(ui.RootElement):
         #We need to draw some pans
         self.atlas = drawing.texture.TextureAtlas('atlas_0.png','atlas.txt',extra_names=None)
 
-        self.test_box = Box(self, Point(100,100), Point(200,200))
-        self.test_box1 = Box(self, Point(160,210), Point(260,310))
+        self.boxes = []
+        #self.boxes.append(Box(self, Point(100,100), Point(200,200)))
+        #self.boxes.append(Box(self, Point(160,210), Point(260,310)))
 
         #self.ball = Circle(self, globals.mouse_screen)
         self.ball = Ball(self, Point(150,400), 10)
         self.dragging_line = Line(self, None, None)
-
+        self.old_line = Line(self, None, None, (0.2,0.2,0.2,1))
+        self.level_text = ui.TextBox(self, Point(0,0.5), Point(1,0.6), 'Get the ball in the cup', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
+        self.text_fade = False
 
         globals.cursor.disable()
         self.dragging = None
@@ -144,23 +181,52 @@ class GameView(ui.RootElement):
 
         self.bottom_handler = globals.space.add_collision_handler(CollisionTypes.BALL, CollisionTypes.BOTTOM)
         self.box_handler = globals.space.add_collision_handler(CollisionTypes.BALL, CollisionTypes.BOX)
+        self.cup_handler = globals.space.add_collision_handler(CollisionTypes.BALL, CollisionTypes.CUP)
 
         self.bottom_handler.begin = self.bottom_hit
         self.box_handler.begin = self.box_hit
+        self.cup_handler.begin = self.cup_hit
+        #self.cup_handler.separate = self.cup_sep
+        self.cup = Cup(self, Point(globals.screen.x/2,0))
+        self.moving = None
+        self.moving_pos = None
+
+    def cup_hit(self, arbiter, space, data):
+        if not self.thrown:
+            return False
+
+        print('Boom cup')
+        return True
+
+    def cup_sep(self, arbiter, space, data):
+        print('What cup')
 
     def box_hit(self, arbiter, space, data):
+        if not self.thrown:
+            return False
+
         print('Boop box')
         return True
 
     def bottom_hit(self, arbiter, space, data):
+        if not self.thrown:
+            return False
         print('KLARG bottom hit')
         self.thrown = False
         globals.cursor.disable()
         return True
 
     def update(self, t):
-        self.test_box.update(t)
-        self.test_box1.update(t)
+        #for box in self.boxes:
+        #    box.update()
+
+        if self.text_fade:
+            if globals.t > self.text_fade:
+                self.level_text.disable()
+                self.text_fade = None
+            else:
+                colour = (1,1,1, (self.text_fade - globals.t)/self.text_fade_duration)
+                self.level_text.set_colour(colour)
 
         if not self.thrown:
             self.ball.body.position = globals.mouse_screen
@@ -168,7 +234,7 @@ class GameView(ui.RootElement):
         else:
             #update the quad according to its trajectory
             pass
-        self.ball.update(t)
+        self.ball.update()
 
     def draw(self):
         drawing.draw_all(globals.quad_buffer, self.atlas.texture)
@@ -180,12 +246,20 @@ class GameView(ui.RootElement):
             self.dragging_line.set_end(pos)
             self.dragging_line.update()
 
+        elif self.moving:
+            self.moving.body.position = pos - self.moving_pos
+            self.moving.update()
+            globals.space.reindex_static()
+
     def mouse_button_down(self,pos,button):
-        if button == 1 and not self.thrown:
+        if button == 1:
             #Clicked the main mouse button. We shouldn't be dragging anything or somethings gone wrong
             if self.dragging:
                 print('What')
                 self.dragging = None
+            if self.thrown:
+                self.thrown = False
+                globals.cursor.disable()
             #We start dragging
             self.dragging = pos
             self.dragging_line.start = pos
@@ -193,9 +267,25 @@ class GameView(ui.RootElement):
             self.dragging_line.update()
             self.dragging_line.enable()
 
+
+        elif button == 3 and not self.thrown and not self.dragging:
+            #Perhaps we can move the blocks around
+            for box in self.boxes:
+                distance, info = box.shape.point_query(pos)
+                if distance < 0:
+                    print('In box',distance,info)
+                    self.moving = box
+                    self.moving_pos = (pos - box.body.position)
+
         return False,False
 
     def mouse_button_up(self, pos, button):
+        if self.moving:
+            if button == 3:
+                self.moving = None
+                self.moving_pos = None
+                return False, False
+
         if button == 1 and self.dragging:
             #release!
             print(f'Drag release from {self.dragging=} to {pos=}')
@@ -209,8 +299,11 @@ class GameView(ui.RootElement):
             self.ball.body.apply_impulse_at_local_point(self.dragging - pos)
             self.thrown = True
             globals.cursor.enable()
+            if self.text_fade == False:
+                self.text_fade = globals.t + self.text_fade_duration
             self.dragging = None
             self.dragging_line.disable()
+            self.old_line.set(self.dragging_line.start, self.dragging_line.end)
 
         elif button == 3 and self.thrown and not self.dragging:
             self.thrown = False

@@ -46,7 +46,7 @@ def init():
                                        globals.screen_root.absolute.top_right,
                                        globals.screen_root.absolute.bottom_right, 0.0))
     for i,l in enumerate(static_lines):
-        l.friction = 3000
+        l.friction = 1
         l.elasticity = 0.95
         if i == 0:
             l.collision_type = game.CollisionTypes.BOTTOM
