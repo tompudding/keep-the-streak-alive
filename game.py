@@ -226,7 +226,7 @@ class NextLevel(ui.HoverableBox):
     line_width = 1
     def __init__(self, parent, bl, tr):
         self.border = drawing.QuadBorder(globals.ui_buffer, line_width=self.line_width)
-        super(NextLevel, self).__init__(parent, bl, tr, (0,0,0,1))
+        super(NextLevel, self).__init__(parent, bl, tr, (0.05,0.05,0.05,1))
         self.text = ui.TextBox(self, Point(0,0.5), Point(1,0.6), 'Well done!', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
         self.border.set_colour(drawing.constants.colours.red)
         self.border.set_vertices(self.absolute.bottom_left, self.absolute.top_right)
@@ -266,12 +266,12 @@ class MainMenu(ui.HoverableBox):
     def __init__(self, parent, bl, tr):
         self.border = drawing.QuadBorder(globals.ui_buffer, line_width=self.line_width)
         self.level_buttons = []
-        super(MainMenu, self).__init__(parent, bl, tr, (0,0,0,1))
+        super(MainMenu, self).__init__(parent, bl, tr, (0.05,0.05,0.05,1))
         self.text = ui.TextBox(self, Point(0,0.8), Point(1,0.95), 'Keep the Streak Alive', 3, colour=drawing.constants.colours.white, alignment=drawing.texture.TextAlignments.CENTRE)
         self.border.set_colour(drawing.constants.colours.red)
         self.border.set_vertices(self.absolute.bottom_left, self.absolute.top_right)
         self.border.enable()
-        #self.replay_button = ui.TextBoxButton(self, 'Replay', Point(0.1, 0.1), size=2, callback=self.replay)
+        self.quit_button = ui.TextBoxButton(self, 'Quit', Point(0.45, 0.1), size=2, callback=self.parent.quit)
         #self.continue_button = ui.TextBoxButton(self, 'Next Level', Point(0.7, 0.1), size=2, callback=self.next_level)
 
         pos = Point(0.2,0.8)
@@ -338,7 +338,7 @@ class Level(object):
 class LevelZero(Level):
     text = 'Get the ball in the cup'
     name = 'Introduction'
-    subtext = 'Shoot from outside the line'
+    subtext = 'Drag to shoot from outside the line'
     items = []
     min_distance = 200
     min_force = 50
@@ -346,7 +346,7 @@ class LevelZero(Level):
 class LevelOne(Level):
     text = 'Level 1: Bounce the ball off the box first'
     name = 'Box Bounce'
-    subtext = 'Left drag to move, right drag to rotate'
+    subtext = 'Left drag to move the box, right drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200))]
     min_distance = 300
     min_force = 50
@@ -584,8 +584,9 @@ class GameView(ui.RootElement):
             #shifts count as the right button
             self.mouse_button_down(globals.mouse_screen, 3)
 
-        elif key == pygame.locals.K_r and self.last_throw:
-            self.throw_ball(*self.last_throw)
+        #This makes it super easy
+        #elif key == pygame.locals.K_r and self.last_throw:
+        #    self.throw_ball(*self.last_throw)
 
     def key_up(self, key):
         if key == pygame.locals.K_SPACE:
@@ -717,11 +718,15 @@ class GameView(ui.RootElement):
         if button == 1 and self.dragging:
             #release!
             print(f'Drag release from {self.dragging=} to {pos=}')
+            diff = self.dragging - pos
+            if diff.length() > 5:
+                self.throw_ball(pos, diff)
 
-            self.throw_ball(pos, self.dragging - pos)
-
-            if self.text_fade == False:
-                self.text_fade = globals.t + self.text_fade_duration
+                if self.text_fade == False:
+                    self.text_fade = globals.t + self.text_fade_duration
+            else:
+                self.dragging = None
+                self.dragging_line.disable()
 
         elif button == 1 and self.moving:
             if self.moving:
