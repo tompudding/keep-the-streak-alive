@@ -163,8 +163,8 @@ class ShaderData(object):
         self.fragment_shader_attrib_binding()
         self.program = shaders.ShaderProgram(self.program)
         glLinkProgram(self.program)
-        self.program.check_validate()
-        self.program.check_linked()
+        #self.program.check_validate()
+        #self.program.check_linked()
         for shader in shads:
             glDeleteShader(shader)
         #self.program    = shaders.compileProgram(VERTEX_SHADER,FRAGMENT_SHADER)
@@ -276,11 +276,11 @@ def init(w, h):
 
     #set_render_dimensions(w, h, z_max)
 
-    glEnable(GL_TEXTURE_2D)
+    #glEnable(GL_TEXTURE_2D)
     glEnable(GL_BLEND)
     glEnable(GL_DEPTH_TEST)
-    glAlphaFunc(GL_GREATER, 0.25);
-    glEnable(GL_ALPHA_TEST)
+    #glAlphaFunc(GL_GREATER, 0.25);
+    #glEnable(GL_ALPHA_TEST)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 
