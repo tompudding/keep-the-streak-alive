@@ -67,6 +67,11 @@ def init():
     globals.tiles = None
 
     pygame.init()
+
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 3)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+
     screen = pygame.display.set_mode((w, h), pygame.OPENGL | pygame.DOUBLEBUF)
     pygame.display.set_caption('Keep the Streak Alive')
     pygame.mouse.set_visible(False)
