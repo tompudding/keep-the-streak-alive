@@ -154,7 +154,7 @@ class TextureAtlas(object):
                     Point(float(x) / self.texture.width, float(y) / self.texture.height), (Point(w, h)))
 
     def subimage(self, name):
-        name = '_'.join(name.split(os.path.sep))
+        name = '_'.join(name.split('/'))
         return self.subimages[name]
 
     def transform_coord(self, subimage, value):
@@ -162,7 +162,7 @@ class TextureAtlas(object):
         value[1] = subimage.pos.y + value[1] * (float(subimage.size.y) / self.texture.height)
 
     def transform_coords(self, subimage, tc):
-        subimage = '_'.join(subimage.split(os.path.sep))
+        subimage = '_'.join(subimage.split('/'))
         subimage = self.subimages[subimage]
         for i in range(len(tc)):
             self.transform_coord(subimage, tc[i])
