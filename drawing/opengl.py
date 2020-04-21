@@ -261,8 +261,8 @@ def init(w, h):
     """
     global gbuffer, shadow_buffer, tactical_buffer, vao
 
-    vao = glGenVertexArrays(1)
-    glBindVertexArray(vao)
+    #vao = glGenVertexArrays(1)
+    #glBindVertexArray(vao)
 
     default_shader.load('default',
                         uniforms=('tex', 'translation', 'scale',

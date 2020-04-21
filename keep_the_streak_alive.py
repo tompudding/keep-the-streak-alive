@@ -67,10 +67,10 @@ def init():
     globals.tiles = None
 
     pygame.init()
-
     pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 2)
-    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 0)
-    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_COMPATIBILITY)
 
     screen = pygame.display.set_mode((w, h), pygame.OPENGL | pygame.DOUBLEBUF)
     pygame.display.set_caption('Keep the Streak Alive')

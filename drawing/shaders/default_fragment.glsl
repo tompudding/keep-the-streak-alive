@@ -1,7 +1,4 @@
-#version 100
-#extension GL_ARB_explicit_attrib_location : require
-precision mediump float;
-
+#version 120
 uniform sampler2D tex;
 uniform int using_textures;
 varying vec2 texcoord;

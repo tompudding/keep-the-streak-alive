@@ -1,4 +1,4 @@
-#version 100
+#version 120
 
 uniform vec3 screen_dimensions;
 uniform vec2 translation;
