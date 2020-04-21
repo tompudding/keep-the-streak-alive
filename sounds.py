@@ -11,7 +11,7 @@ class Sounds(object):
         self.player_damage = []
         self.boops = []
 
-        for filename in glob.glob(os.path.join('resource','sounds','*.ogg')):
+        for filename in glob.glob(os.path.join('resource','sounds','*.wav')):
             sound = pygame.mixer.Sound(filename)
             sound.set_volume(0.6)
             name = os.path.basename(filename)

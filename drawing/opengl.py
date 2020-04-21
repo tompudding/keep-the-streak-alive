@@ -259,7 +259,10 @@ def init(w, h):
     """
     One time initialisation of the screen
     """
-    global gbuffer, shadow_buffer, tactical_buffer
+    global gbuffer, shadow_buffer, tactical_buffer, vao
+
+    vao = glGenVertexArrays(1)
+    glBindVertexArray(vao)
 
     default_shader.load('default',
                         uniforms=('tex', 'translation', 'scale',
@@ -276,11 +279,11 @@ def init(w, h):
 
     #set_render_dimensions(w, h, z_max)
 
-    glEnable(GL_TEXTURE_2D)
+    #glEnable(GL_TEXTURE_2D)
     glEnable(GL_BLEND)
-    glEnable(GL_DEPTH_TEST)
-    glAlphaFunc(GL_GREATER, 0.25);
-    glEnable(GL_ALPHA_TEST)
+    #glEnable(GL_DEPTH_TEST)
+    #glAlphaFunc(GL_GREATER, 0.25);
+    #glEnable(GL_ALPHA_TEST)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 

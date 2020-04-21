@@ -1,22 +1,23 @@
-#version 120
+#version 100
 #extension GL_ARB_explicit_attrib_location : require
+precision mediump float;
 
 uniform sampler2D tex;
 uniform int using_textures;
-in vec2 texcoord;
-in vec4 colour;
+varying vec2 texcoord;
+varying vec4 colour;
 
-varying out vec4 out_colour;
+//varying vec4 out_colour;
 
 void main()
 {
     if(1 == using_textures) {
-        out_colour = texture2D(tex, texcoord)*colour;
+        gl_FragColor = texture2D(tex, texcoord)*colour;
     }
     else {
-        out_colour = colour;
+        gl_FragColor = colour;
     }
-    if(out_colour.a == 0) {
+    if(gl_FragColor.a == 0.0) {
         discard;
     }
 }
