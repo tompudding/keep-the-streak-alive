@@ -1,14 +1,14 @@
-#version 130
+#version 120
 
 uniform vec3 screen_dimensions;
 uniform vec2 translation;
 uniform vec2 scale;
-in vec3 vertex_data;
-in vec2 tc_data;
-in vec4 colour_data;
+attribute vec3 vertex_data;
+attribute vec2 tc_data;
+attribute vec4 colour_data;
 
-out vec2 texcoord;
-out vec4 colour;
+varying out vec2 texcoord;
+varying out vec4 colour;
 
 void main()
 {
