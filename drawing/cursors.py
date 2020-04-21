@@ -16,7 +16,7 @@ from . import sprite
 from globals.types import Point
 
 def expand_resource(name):
-    return f'{globals.dirs.cursor}_{name}.png'
+    return f'resource/cursor/{name}.png'
 
 class Cursor(object):
     def __init__(self):
