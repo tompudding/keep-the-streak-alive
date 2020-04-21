@@ -6,7 +6,7 @@ block_cipher = None
 pymunk_dir = os.path.dirname(pymunk.__file__)
 
 a = Analysis(['keep_the_streak_alive.py', 'keep_the_streak_alive.spec'],
-             pathex=['/Users/tom/keep-the-streak-alive'],
+             pathex=['c:\\Users\\tom\\Documents\\keep-the-streak-alive'],
              binaries=[(pymunk.chipmunk_path, '.')],
              datas=None,
              hiddenimports=PyInstaller.utils.hooks.collect_submodules('pkg_resources'),
@@ -18,8 +18,8 @@ a = Analysis(['keep_the_streak_alive.py', 'keep_the_streak_alive.spec'],
              cipher=block_cipher)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
-image_tree = Tree('/Users/tom//keep-the-streak-alive/resource', prefix='resource')
-shader_tree = Tree('/Users/tom/keep-the-streak-alive/drawing', prefix='drawing')
+image_tree = Tree('c:\\Users\\tom\\Documents\\keep-the-streak-alive\\resource', prefix='resource')
+shader_tree = Tree('c:\\Users\\tom\\Documents\\keep-the-streak-alive\\drawing', prefix='drawing')
 
 a.datas += image_tree
 a.datas += shader_tree
@@ -37,7 +37,4 @@ exe = EXE(pyz,
           exclude_binaries =1
 )
 dist = COLLECT(exe, a.binaries, a.zipfiles, a.datas, name='keep_the_streak_alive')
-app = BUNDLE(dist,
-         name='keep_the_streak_alive.app',
-         icon=None,
-         bundle_identifier=None)
+
