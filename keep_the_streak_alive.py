@@ -88,6 +88,7 @@ def main_run():
     clock = pygame.time.Clock()
     last_handled = False
 
+
     while not done:
 
         clock.tick(60)
@@ -179,6 +180,8 @@ def main_run():
 
 def main():
     """Main loop for the game"""
+    import os,sys
+
     init()
 
     #globals.current_view = main_menu.MainMenu()
@@ -193,7 +196,10 @@ def main():
     main_run()
 
 if __name__ == '__main__':
-    import logging
+    import logging, os, sys
+    if 'MacOS' in sys.argv[0]:
+        #I don't really understand bundles, but when we get launched the cwd is not set
+        os.chdir(os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]),'..','Resources')))
     try:
         logging.basicConfig(level=logging.DEBUG, filename='errorlog.log')
         # logging.basicConfig(level=logging.DEBUG)

@@ -402,7 +402,7 @@ class LevelZero(Level):
 class LevelOne(Level):
     text = 'Level 1: Bounce the ball off the box first'
     name = 'Box Bounce'
-    subtext = 'Left drag to move the box, right drag to rotate'
+    subtext = 'Left (or space) drag to move the box, right (or shift) drag to rotate'
     items = [(Box, Point(100, 100), Point(200,200))]
     min_distance = 300
     min_force = 50
