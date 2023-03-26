@@ -17,15 +17,16 @@ class ShapeBuffer(object):
 
     def __init__(self, size):
         self.vertex_data = numpy.zeros((size * self.num_points, 3), numpy.float32)
-        self.tc_data     = numpy.zeros((size * self.num_points, 2), numpy.float32)
-        self.colour_data = numpy.ones((size * self.num_points, 4),
-                                      numpy.float32)  # RGBA default is white opaque
-        self.indices     = numpy.zeros(size * self.num_points, numpy.uint32)
+        self.tc_data = numpy.zeros((size * self.num_points, 2), numpy.float32)
+        self.colour_data = numpy.ones(
+            (size * self.num_points, 4), numpy.float32
+        )  # RGBA default is white opaque
+        self.indices = numpy.zeros(size * self.num_points, numpy.uint32)
         self.size = size
         for i in range(size * self.num_points):
             self.indices[i] = i
         self.current_size = 0
-        self.max_size     = size * self.num_points
+        self.max_size = size * self.num_points
         self.vacant = set()
 
     def next(self):
@@ -89,8 +90,11 @@ class QuadBuffer(ShapeBuffer):
         super(QuadBuffer, self).__init__(size)
 
     def sort_for_depth(self):
-        depths = [(i, min(self.vertex_data[self.indices[i + j]][1] for j in range(4)))
-                  for i in range(0, self.current_size, 4) if i not in self.vacant]
+        depths = [
+            (i, min(self.vertex_data[self.indices[i + j]][1] for j in range(4)))
+            for i in range(0, self.current_size, 4)
+            if i not in self.vacant
+        ]
         # The dotted textures are supposed to be drawn on top of the tiles, so they have their z coordinates
         # added to max_world.y so they have the highest z values. However for draw order we don't want them
         # drawn last else they'll mess up the occlude maps (they have no occlude component), so we mod
@@ -129,7 +133,7 @@ class LineBuffer(ShapeBuffer):
 
 
 class ShapeVertex(object):
-    """ Convenience object to allow nice slicing of the parent buffer """
+    """Convenience object to allow nice slicing of the parent buffer"""
 
     def __init__(self, index, buffer):
         self.index = index
@@ -138,13 +142,13 @@ class ShapeVertex(object):
     def __getitem__(self, i):
         if isinstance(i, slice):
             start, stop, stride = i.indices(len(self.buffer) - self.index)
-            return self.buffer[self.index + start:self.index + stop:stride]
+            return self.buffer[self.index + start : self.index + stop : stride]
         return self.buffer[self.index + i]
 
     def __setitem__(self, i, value):
         if isinstance(i, slice):
             start, stop, stride = i.indices(len(self.buffer) - self.index)
-            self.buffer[self.index + start:self.index + stop:stride] = value
+            self.buffer[self.index + start : self.index + stop : stride] = value
         else:
             self.buffer[self.index + i] = value
 
@@ -161,12 +165,12 @@ class Shape(object):
             self.index = index
         self.source = source
         self.vertex = ShapeVertex(self.index, source.vertex_data)
-        self.tc     = ShapeVertex(self.index, source.tc_data)
+        self.tc = ShapeVertex(self.index, source.tc_data)
         self.colour = ShapeVertex(self.index, source.colour_data)
         if vertex is not None:
-            self.vertex[0:self.num_points] = vertex
+            self.vertex[0 : self.num_points] = vertex
         if tc is not None:
-            self.tc[0:self.num_points] = tc
+            self.tc[0 : self.num_points] = tc
         self.old_vertices = None
         self.deleted = False
         self.enabled = True
@@ -190,7 +194,7 @@ class Shape(object):
             return
         self.enabled = False
         if self.old_vertices is None:
-            self.old_vertices = numpy.copy(self.vertex[0:self.num_points])
+            self.old_vertices = numpy.copy(self.vertex[0 : self.num_points])
             for i in range(self.num_points):
                 self.vertex[i] = (0, 0, 0)
 
@@ -211,7 +215,7 @@ class Shape(object):
             return
         self.setvertices(self.vertex, bl, tr, z)
         if self.old_vertices is not None:
-            self.old_vertices = numpy.copy(self.vertex[0:self.num_points])
+            self.old_vertices = numpy.copy(self.vertex[0 : self.num_points])
             for i in range(self.num_points):
                 self.vertex[i] = (0, 0, 0)
 
@@ -220,7 +224,7 @@ class Shape(object):
             return
         setallvertices(self, self.vertex, vertices, z)
         if self.old_vertices is not None:
-            self.old_vertices = numpy.copy(self.vertex[0:self.num_points])
+            self.old_vertices = numpy.copy(self.vertex[0 : self.num_points])
             for i in range(self.num_points):
                 self.vertex[i] = (0, 0, 0)
 
@@ -249,7 +253,7 @@ class Shape(object):
                 current[i] = target[i]
 
     def set_texture_coordinates(self, tc):
-        self.tc[0:self.num_points] = tc
+        self.tc[0 : self.num_points] = tc
 
 
 def setverticesquad(self, vertex, bl, tr, z):
@@ -257,6 +261,7 @@ def setverticesquad(self, vertex, bl, tr, z):
     vertex[1] = (bl.x, tr.y, z)
     vertex[2] = (tr.x, tr.y, z)
     vertex[3] = (tr.x, bl.y, z)
+
 
 def setverticesnaquad(self, vertex, bl, br, tl, tr, z):
     vertex[0] = (bl.x, bl.y, z)
@@ -302,28 +307,28 @@ def setcoloursline(self, colour, values):
 class Quad(Shape):
     num_points = 4
     setvertices = setverticesquad
-    setcolour   = setcolourquad
+    setcolour = setcolourquad
 
 
 class Line(Shape):
     num_points = 2
     setvertices = setverticesline
-    setcolour   = setcolourline
+    setcolour = setcolourline
+
 
 class NonAlignedQuad(Shape):
     num_points = 4
     setvertices = setverticesnaquad
-    setcolour   = setcolourquad
+    setcolour = setcolourquad
 
     def set_vertices(self, bl, br, tl, tr, z):
         if self.deleted:
             return
         self.setvertices(self.vertex, bl, br, tl, tr, z)
         if self.old_vertices is not None:
-            self.old_vertices = numpy.copy(self.vertex[0:self.num_points])
+            self.old_vertices = numpy.copy(self.vertex[0 : self.num_points])
             for i in range(self.num_points):
                 self.vertex[i] = (0, 0, 0)
-
 
 
 class QuadBorder(object):
@@ -337,23 +342,23 @@ class QuadBorder(object):
 
     def set_vertices(self, bl, tr):
         # top bar
-        self.quads[0].set_vertices(Point(bl.x, tr.y - self.line_width),
-                                  tr,
-                                  drawing.constants.DrawLevels.ui + 1)
+        self.quads[0].set_vertices(
+            Point(bl.x, tr.y - self.line_width), tr, drawing.constants.DrawLevels.ui + 1
+        )
         # right bar
-        self.quads[1].set_vertices(Point(tr.x - self.line_width, bl.y),
-                                  tr,
-                                  drawing.constants.DrawLevels.ui + 1)
+        self.quads[1].set_vertices(
+            Point(tr.x - self.line_width, bl.y), tr, drawing.constants.DrawLevels.ui + 1
+        )
 
         # bottom bar
-        self.quads[2].set_vertices(bl,
-                                  Point(tr.x, bl.y + self.line_width),
-                                  drawing.constants.DrawLevels.ui + 1)
+        self.quads[2].set_vertices(
+            bl, Point(tr.x, bl.y + self.line_width), drawing.constants.DrawLevels.ui + 1
+        )
 
         # left bar
-        self.quads[3].set_vertices(bl,
-                                  Point(bl.x + self.line_width, tr.y),
-                                  drawing.constants.DrawLevels.ui + 1)
+        self.quads[3].set_vertices(
+            bl, Point(bl.x + self.line_width, tr.y), drawing.constants.DrawLevels.ui + 1
+        )
 
     def set_colour(self, colour):
         for quad in self.quads:
