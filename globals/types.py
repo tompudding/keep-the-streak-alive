@@ -1,6 +1,7 @@
 import math
 import os
 from functools import total_ordering
+import pymunk
 
 
 class Point(object):
@@ -47,6 +48,9 @@ class Point(object):
 
     def __str__(self):
         return "(%.2f,%.2f)" % (self.x, self.y)
+
+    def __len__(self):
+        return 2
 
     @total_ordering
     def __lt__(self, other):
@@ -99,3 +103,26 @@ class Directories:
         self.resource = base
         for name in "sprites", "foreground", "computer", "cursor":
             setattr(self, name, os.path.join(base, name))
+
+
+class Segment(pymunk.Segment):
+    def __init__(self, body, a, b, radius):
+        super().__init__(body, tuple(a), tuple(b), radius)
+
+
+class Body(pymunk.Body):
+    @property
+    def position(self):
+        return super().position
+
+    @position.setter
+    def position(self, a):
+        super(Body, self.__class__).position.fset(self, tuple(a))
+
+    def apply_impulse_at_local_point(self, direction):
+        return super().apply_impulse_at_local_point(tuple(direction))
+
+
+# def create_segment(body, a, b, radius):
+#     # The newest version of pymunk seems to insist on args being tuples
+#     return seg_wrapper(pymunk.Segment(body, tuple(a), tuple(b), radius)

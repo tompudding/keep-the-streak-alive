@@ -2,7 +2,7 @@ import pygame
 import ui
 import globals
 import drawing
-from globals.types import Point
+from globals.types import Point, Segment
 import sounds
 import game
 import pymunk
@@ -26,7 +26,7 @@ def init():
     globals.space.damping = 0.999  # to prevent it from blowing up.
 
     # Put lines around the screen
-    bottom = pymunk.Segment(
+    bottom = Segment(
         globals.space.static_body,
         globals.screen_root.absolute.bottom_left,
         globals.screen_root.absolute.bottom_right,
@@ -38,7 +38,7 @@ def init():
 
     # left hand side
     static_lines.append(
-        pymunk.Segment(
+        Segment(
             globals.space.static_body,
             globals.screen_root.absolute.bottom_left,
             globals.screen_root.absolute.top_left,
@@ -47,7 +47,7 @@ def init():
     )
     # top
     static_lines.append(
-        pymunk.Segment(
+        Segment(
             globals.space.static_body,
             globals.screen_root.absolute.top_left,
             globals.screen_root.absolute.top_right,
@@ -56,7 +56,7 @@ def init():
     )
     # right
     static_lines.append(
-        pymunk.Segment(
+        Segment(
             globals.space.static_body,
             globals.screen_root.absolute.top_right,
             globals.screen_root.absolute.bottom_right,
@@ -70,7 +70,7 @@ def init():
             l.collision_type = game.CollisionTypes.BOTTOM
         else:
             l.collision_type = game.CollisionTypes.WALL
-    globals.space.add(static_lines)
+    globals.space.add(*static_lines)
 
     globals.screen.full_quad = drawing.Quad(globals.screen_quadbuffer)
     globals.screen.full_quad.set_vertices(Point(0, 0), globals.screen, 0.01)

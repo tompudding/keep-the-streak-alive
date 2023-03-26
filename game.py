@@ -1,6 +1,6 @@
 import ui
 import globals
-from globals.types import Point
+from globals.types import Point, Segment, Body
 import drawing
 import pymunk
 import cmath
@@ -41,10 +41,10 @@ class Box(object):
         self.touched = False
         mass = 10.0
         centre = self.quad.get_centre()
-        vertices = [Point(*v[:2]) - centre for v in self.quad.vertex[:4]]
+        vertices = [tuple(Point(*v[:2]) - centre) for v in self.quad.vertex[:4]]
         # vertices = [vertices[2],vertices[3],vertices[0],vertices[1]]
         self.moment = pymunk.moment_for_poly(mass, vertices)
-        self.body = pymunk.Body(mass=mass, moment=self.moment, body_type=pymunk.Body.STATIC)
+        self.body = Body(mass=mass, moment=self.moment, body_type=pymunk.Body.STATIC)
         self.body.position = to_world_coords(self.quad.get_centre().to_float())
         self.body.force = 0, 0
         self.body.torque = 0
@@ -109,7 +109,7 @@ class Ball(object):
 
         mass = 0.1
         self.moment = pymunk.moment_for_circle(mass, 0, radius)
-        self.body = pymunk.Body(mass=mass, moment=self.moment)
+        self.body = Body(mass=mass, moment=self.moment)
         self.body.position = to_world_coords(self.quad.get_centre().to_float())
         self.body.force = 0, 0
         self.body.torque = 0
@@ -183,7 +183,7 @@ class Cup(object):
 
         for i in range(len(self.vertices) - 1):
             v = self.vertices
-            segment = pymunk.Segment(globals.space.static_body, v[i], v[i + 1], 0)
+            segment = Segment(globals.space.static_body, v[i], v[i + 1], 0)
             segment.friction = 1000
             segment.elasticity = 0
             if i == 1:
@@ -197,7 +197,7 @@ class Cup(object):
             self.line_quads.append(line_quad)
             # print(v[i],v[i+1])
 
-        globals.space.add(self.segments)
+        globals.space.add(*self.segments)
 
     def disable(self):
         for quad in self.line_quads:
@@ -858,8 +858,8 @@ class GameView(ui.RootElement):
             in_box = None
             if False == self.levels[self.current_level].boxes_pos_fixed:
                 for box in self.boxes:
-                    distance, info = box.shape.point_query(pos)
-                    if distance < 0:
+                    info = box.shape.point_query(tuple(pos))
+                    if info.distance < 0:
                         self.moving = box
                         self.moving_pos = pos - box.body.position
                         return False, False
@@ -881,8 +881,8 @@ class GameView(ui.RootElement):
         elif button == 3 and not self.thrown and not self.dragging:
             # Perhaps we can move the blocks around
             for box in self.boxes:
-                distance, info = box.shape.point_query(pos)
-                if distance < 0:
+                info = box.shape.point_query(tuple(pos))
+                if info.distance < 0:
                     # print('In box',distance,info)
                     self.rotating = box
                     # self.rotating_pos = (pos - box.body.position)
